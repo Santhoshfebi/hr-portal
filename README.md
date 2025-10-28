@@ -41,7 +41,27 @@ This app allows **recruiters** to post jobs and manage candidates, while **candi
 
 ## ⚙️ Installation & Setup
 
-### 1️⃣ Clone the Repository
+1️⃣ Clone the Repository
 ```bash
 git clone https://github.com/your-username/recruitment-platform.git
 cd recruitment-platform
+
+2️⃣ Install Dependencies
+npm install
+
+3️⃣ Configure Environment Variables
+
+Create a .env file in the root directory and add your Supabase keys:
+
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+
+
+🔐 You can find these keys in your Supabase Project → Settings → API.
+
+4️⃣ Start Development Server
+npm run dev
+
+
+Your app will be live at:
+👉 http://localhost:5173
