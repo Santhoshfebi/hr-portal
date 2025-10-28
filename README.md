@@ -1,16 +1,47 @@
-# React + Vite
+# 💼 AI-Powered Recruitment Platform
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A modern, full-stack recruitment platform built with **React**, **TailwindCSS**, and **Supabase**.  
+This app allows **recruiters** to post jobs and manage candidates, while **candidates** can create profiles, upload resumes, and apply for positions — all with **real-time updates** and **AI-assisted insights**.
 
-Currently, two official plugins are available:
+## Deployment Link : https://hr-portal-iota.vercel.app/
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🚀 Features
 
-## React Compiler
+### 👤 For Candidates
+- Create and manage detailed profiles (education, experience, skills)
+- Upload and preview resumes securely
+- AI-based skill matching (coming soon)
+- Profile completion tracking with visual indicators
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 🧑‍💼 For Recruiters
+- Post and manage job listings (coming soon)
+- View candidate applications and profiles
+- Intelligent recommendations (AI integration planned) (coming soon)
+- Secure role-based access (Recruiter / Candidate)
 
-## Expanding the ESLint configuration
+### 🧩 General
+- Authentication & authorization via **Supabase Auth**
+- Cloud storage for resumes and profile images via **Supabase Storage**
+- Fully responsive, modern UI with **TailwindCSS**
+- Toast notifications and progress indicators
+- Protected routes with **React Router**
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+---
+
+## 🛠️ Tech Stack
+
+| Category | Technology |
+| Frontend | React + Vite |
+| UI Framework | TailwindCSS |
+| Icons | Lucide React |
+| Backend | Supabase (PostgreSQL + Auth + Storage) |
+| Deployment | Vercel |
+| Version Control | Git & GitHub |
+
+
+## ⚙️ Installation & Setup
+
+### 1️⃣ Clone the Repository
+```bash
+git clone https://github.com/your-username/recruitment-platform.git
+cd recruitment-platform
