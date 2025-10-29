@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { motion, AnimatePresence } from "framer-motion";
 import { Upload, FileText, Trash2, X } from "lucide-react";
+import { form } from "framer-motion/client";
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
@@ -21,6 +22,8 @@ export default function Dashboard() {
   const [showResume, setShowResume] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const fullName = user?.user_metadata?.full_name || "user";
+
 
   // ✅ Fetch user + candidate profile
   useEffect(() => {
@@ -52,7 +55,7 @@ export default function Dashboard() {
         candidateData?.resume_url || profile?.resume_url || null;
 
       setFormData({
-        full_name: profile?.full_name || "",
+        full_name: profile?.full_name || fullName,
         email: profile?.email || currentUser.email,
         phone: profile?.phone || candidateData?.phone || "",
         education: candidateData?.education || "",
@@ -196,9 +199,9 @@ export default function Dashboard() {
           {role === "recruiter" ? "Recruiter Dashboard" : "Candidate Dashboard"}
         </h1>
         <p className="text-gray-600 mb-8 text-center">
-          Welcome back,{" "}
+          Welcome back : {" "}
           <span className="font-semibold text-gray-900">
-            {formData.full_name || "User"}
+            {fullName.split(" ")[0]}
           </span>
           !
         </p>
@@ -208,8 +211,8 @@ export default function Dashboard() {
           <>
             <form onSubmit={handleSave} className="space-y-5">
               {[
-                ["Full Name", "full_name", false],
-                ["Phone Number", "phone", true],
+                ["Full Name", "full_name", true],
+                ["Phone Number", "phone", false],
                 ["Email", "email", true],
               ].map(([label, key, readOnly]) => (
                 <div key={key}>

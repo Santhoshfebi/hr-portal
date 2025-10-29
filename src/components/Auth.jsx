@@ -14,7 +14,7 @@ export default function Auth() {
   const [message, setMessage] = useState({ text: "", type: "" });
   const navigate = useNavigate();
 
-  // ✅ Redirect if user already logged in
+  // ✅ Redirect if already logged in
   useEffect(() => {
     const checkSession = async () => {
       const { data } = await supabase.auth.getSession();
@@ -36,6 +36,7 @@ export default function Auth() {
 
     try {
       if (isLogin) {
+        // 🔹 LOGIN FLOW
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -50,25 +51,51 @@ export default function Auth() {
         }
         setMessage({ text: "✅ Logged in successfully!", type: "success" });
       } else {
-        const { error } = await supabase.auth.signUp({
+        // 🔹 SIGNUP FLOW
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            data: {
-              role,
-              full_name: fullName,
-              phone,
-            },
+            data: { role, full_name: fullName, phone },
           },
         });
         if (error) throw error;
+
+        const user = data?.user;
+        if (user) {
+          // ✅ Store details in 'profiles' table
+          const { error: profileError } = await supabase.from("profiles").insert([
+            {
+              id: user.id,
+              email,
+              full_name: fullName,
+              phone,
+              role,
+              created_at: new Date(),
+            },
+          ]);
+          if (profileError) console.error("Profile insert error:", profileError.message);
+
+          // ✅ If candidate, create initial record in 'candidates'
+          if (role === "candidate") {
+            const { error: candidateError } = await supabase.from("candidates").insert([
+              {
+                user_id: user.id,
+                email,
+                phone,
+                full_name: fullName,
+              },
+            ]);
+            if (candidateError) console.error("Candidate insert error:", candidateError.message);
+          }
+        }
 
         setMessage({
           text: "✅ Signup successful! Please check your email to confirm your account.",
           type: "success",
         });
 
-        // Reset fields
+        // Reset form fields
         setFullName("");
         setPhone("");
         setEmail("");
@@ -128,7 +155,7 @@ export default function Auth() {
           </div>
         )}
 
-        {/* ✅ Inline feedback messages */}
+        {/* ✅ Feedback message */}
         {message.text && (
           <div
             className={`text-center p-2 rounded-md mb-4 ${
@@ -141,6 +168,7 @@ export default function Auth() {
           </div>
         )}
 
+        {/* ✅ Auth Form */}
         <AnimatePresence mode="wait">
           <motion.form
             key={isLogin ? "login" : "signup"}
@@ -151,7 +179,6 @@ export default function Auth() {
             onSubmit={handleAuth}
           >
             <div className="space-y-4">
-              {/* ✅ Only show full name & phone for sign up */}
               {!isLogin && (
                 <>
                   <input
