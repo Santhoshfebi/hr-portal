@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Menu, X, LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -23,8 +23,8 @@ export default function Navbar() {
     };
     getUser();
 
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => setUser(session?.user || null)
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) =>
+      setUser(session?.user || null)
     );
 
     return () => listener.subscription.unsubscribe();
@@ -51,17 +51,18 @@ export default function Navbar() {
 
   // Add scroll effect
   useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
-    };
+    const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const fullName = user?.user_metadata?.full_name || "User";
-  const avatarUrl =
-    user?.user_metadata?.avatar_url ||
-    `https://api.dicebear.com/8.x/initials/svg?seed=${fullName}`;
+  const avatarUrl = useMemo(
+    () =>
+      user?.user_metadata?.avatar_url ||
+      `https://api.dicebear.com/8.x/initials/svg?seed=${fullName}`,
+    [user, fullName]
+  );
 
   return (
     <motion.nav
@@ -73,7 +74,7 @@ export default function Navbar() {
           : "0 0 0 rgba(0,0,0,0)",
       }}
       transition={{ duration: 0.25 }}
-      className="fixed top-0 left-0 w-full z-50 backdrop-blur-sm border-b border-gray-100"
+      className="fixed top-0 left-0 w-full z-50 backdrop-blur-sm border-b border-gray-100 bg-white/80"
     >
       <div className="max-w-6xl mx-auto flex justify-between items-center px-6 sm:px-8 h-full">
         {/* Logo */}
@@ -167,6 +168,7 @@ export default function Navbar() {
         {/* Mobile Menu Toggle */}
         <button
           className="sm:hidden text-gray-700 focus:outline-none"
+          aria-label="Toggle menu"
           onClick={() => setIsOpen(!isOpen)}
         >
           {isOpen ? <X size={24} /> : <Menu size={24} />}

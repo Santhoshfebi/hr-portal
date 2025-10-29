@@ -3,7 +3,7 @@ import { Facebook, Linkedin, Twitter } from "lucide-react";
 
 export default function Footer() {
   return (
-    <footer className="bg-linear-to-b from-gray-500 to-gray-900 text-gray-300 mt-24">
+    <footer className="bg-linear-to-b from-gray-600 to-gray-900 text-gray-300 mt-24">
       <div className="max-w-7xl mx-auto px-6 py-14 grid gap-10 sm:grid-cols-3">
         {/* Column 1 */}
         <div>
@@ -13,24 +13,29 @@ export default function Footer() {
             transparency, and security — all in one platform.
           </p>
 
-          {/* Social Media Icons */}
           <div className="flex gap-4 justify-center sm:justify-start">
             <a
-              href="#"
+              href="https://facebook.com"
+              target="_blank"
+              rel="noopener noreferrer"
               className="p-2 rounded-full bg-gray-700 hover:bg-gray-500 transition"
               aria-label="Facebook"
             >
               <Facebook size={18} className="text-white" />
             </a>
             <a
-              href="#"
+              href="https://linkedin.com"
+              target="_blank"
+              rel="noopener noreferrer"
               className="p-2 rounded-full bg-gray-700 hover:bg-gray-500 transition"
               aria-label="LinkedIn"
             >
               <Linkedin size={18} className="text-white" />
             </a>
             <a
-              href="#"
+              href="https://twitter.com"
+              target="_blank"
+              rel="noopener noreferrer"
               className="p-2 rounded-full bg-gray-700 hover:bg-gray-500 transition"
               aria-label="Twitter"
             >
@@ -43,38 +48,16 @@ export default function Footer() {
         <div className="text-center sm:text-left">
           <h3 className="font-semibold text-white mb-4 text-lg">Quick Links</h3>
           <ul className="space-y-2 text-sm">
-            <li>
-              <Link
-                to="/"
-                className="hover:text-blue-400 transition-colors duration-200"
-              >
-                Home
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/dashboard"
-                className="hover:text-blue-400 transition-colors duration-200"
-              >
-                Dashboard
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/about"
-                className="hover:text-blue-400 transition-colors duration-200"
-              >
-                About
-              </Link>
-            </li>
-            <li>
-              <Link
-                to="/contact"
-                className="hover:text-blue-400 transition-colors duration-200"
-              >
-                Contact
-              </Link>
-            </li>
+            {["Home", "Dashboard", "About", "Contact"].map((item) => (
+              <li key={item}>
+                <Link
+                  to={`/${item.toLowerCase()}`}
+                  className="hover:text-blue-400 transition-colors duration-200"
+                >
+                  {item}
+                </Link>
+              </li>
+            ))}
           </ul>
         </div>
 
@@ -83,20 +66,26 @@ export default function Footer() {
           <h3 className="font-semibold text-white mb-4 text-lg">Contact Us</h3>
           <p className="text-gray-400 text-sm leading-relaxed">
             📍 123 Corporate Avenue, Bengaluru, India <br />
-            ✉️ <a href="mailto:support@hrportal.com" className="hover:text-blue-400 transition">support@hrportal.com</a> <br />
+            ✉️{" "}
+            <a
+              href="mailto:support@hrportal.com"
+              className="hover:text-blue-400 transition"
+            >
+              support@hrportal.com
+            </a>{" "}
+            <br />
             ☎️ +91 98765 43210
           </p>
         </div>
       </div>
 
-      {/* Bottom bar */}
       <div className="border-t border-gray-700 text-center py-5 text-gray-500 text-sm">
         <p>
-          © {new Date().getFullYear()} <span className="font-semibold text-white">HR Portal</span>. All rights reserved.
+          © {new Date().getFullYear()}{" "}
+          <span className="font-semibold text-white">HR Portal</span>. All rights
+          reserved.
         </p>
-        <p className="text-xs mt-1">
-          Built with React & Supabase
-        </p>
+        <p className="text-xs mt-1">Built with React & Supabase</p>
       </div>
     </footer>
   );
