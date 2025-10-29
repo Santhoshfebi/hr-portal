@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../supabaseClient";
 import { motion, AnimatePresence } from "framer-motion";
 import { Upload, FileText, Trash2, X } from "lucide-react";
-import { form } from "framer-motion/client";
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
@@ -22,53 +21,68 @@ export default function Dashboard() {
   const [showResume, setShowResume] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const fullName = user?.user_metadata?.full_name || "user";
 
-
-  // ✅ Fetch user + candidate profile
+  // ✅ Fetch user + profile + candidate data
   useEffect(() => {
     const fetchProfile = async () => {
-      const { data: authData } = await supabase.auth.getUser();
-      if (!authData?.user) {
-        navigate("/auth", { replace: true });
-        return;
-      }
+      try {
+        const { data: authData, error: authError } = await supabase.auth.getUser();
+        if (authError) throw authError;
+        if (!authData?.user) {
+          navigate("/auth", { replace: true });
+          return;
+        }
 
-      const currentUser = authData.user;
-      setUser(currentUser);
+        const currentUser = authData.user;
+        setUser(currentUser);
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name, email, phone, role, resume_url")
-        .eq("id", currentUser.id)
-        .single();
+        // Extract metadata
+        const metadata = currentUser.user_metadata || {};
+        const defaultName = metadata.full_name || currentUser.email?.split("@")[0] || "User";
+        const defaultEmail = currentUser.email || "";
+        const defaultPhone = metadata.phone || "";
 
-      setRole(profile?.role || "candidate");
+        // Fetch profile data
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name, email, phone, role, resume_url")
+          .eq("id", currentUser.id)
+          .single();
 
-      const { data: candidateData } = await supabase
-        .from("candidates")
-        .select("*")
-        .eq("user_id", currentUser.id)
-        .single();
+        const userRole = profile?.role || "candidate";
+        setRole(userRole);
 
-      const resumeUrlData =
-        candidateData?.resume_url || profile?.resume_url || null;
+        // Fetch candidate data
+        const { data: candidateData } = await supabase
+          .from("candidates")
+          .select("*")
+          .eq("user_id", currentUser.id)
+          .single();
 
-      setFormData({
-        full_name: profile?.full_name || fullName,
-        email: profile?.email || currentUser.email,
-        phone: profile?.phone || candidateData?.phone || "",
-        education: candidateData?.education || "",
-        experience: candidateData?.experience || "",
-        skills: candidateData?.skills || "",
-      });
+        const resumeUrlData =
+          candidateData?.resume_url || profile?.resume_url || null;
 
-      setResumeUrl(resumeUrlData);
-      if (candidateData?.resume_name) {
-        setResumeFileName(candidateData.resume_name);
-      } else if (resumeUrlData) {
-        const name = decodeURIComponent(resumeUrlData.split("/").pop());
-        setResumeFileName(name);
+        // ✅ Auto-fill data from metadata and existing profile/candidate info
+        setFormData({
+          full_name: profile?.full_name || defaultName,
+          email: profile?.email || defaultEmail,
+          phone: profile?.phone || candidateData?.phone || defaultPhone,
+          education: candidateData?.education || "",
+          experience: candidateData?.experience || "",
+          skills: candidateData?.skills || "",
+        });
+
+        if (candidateData?.resume_name) {
+          setResumeFileName(candidateData.resume_name);
+        } else if (resumeUrlData) {
+          const name = decodeURIComponent(resumeUrlData.split("/").pop());
+          setResumeFileName(name);
+        }
+
+        setResumeUrl(resumeUrlData);
+      } catch (err) {
+        console.error("Error fetching profile:", err.message);
+        toast(`❌ ${err.message}`, "error");
       }
     };
 
@@ -96,6 +110,7 @@ export default function Dashboard() {
         .update({
           full_name: formData.full_name,
           phone: formData.phone,
+          email: formData.email,
           resume_url: resumeUrl,
         })
         .eq("id", user.id);
@@ -112,8 +127,17 @@ export default function Dashboard() {
   // ✅ Upload resume
   const handleResumeUpload = async () => {
     if (!resumeFile) return toast("Please select a resume file first.", "info");
-    setLoading(true);
 
+    if (
+      !["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"].includes(resumeFile.type)
+    ) {
+      return toast("Please upload a PDF or Word document.", "error");
+    }
+    if (resumeFile.size > 5 * 1024 * 1024) {
+      return toast("File size must be under 5MB.", "warning");
+    }
+
+    setLoading(true);
     try {
       const fileExt = resumeFile.name.split(".").pop();
       const fileName = `${user.id}.${fileExt}`;
@@ -187,6 +211,8 @@ export default function Dashboard() {
     );
   }
 
+  const firstName = formData.full_name?.split(" ")[0] || "User";
+
   return (
     <div className="min-h-screen bg-linear-to-b from-blue-50 to-white py-20 px-6">
       <motion.div
@@ -199,195 +225,219 @@ export default function Dashboard() {
           {role === "recruiter" ? "Recruiter Dashboard" : "Candidate Dashboard"}
         </h1>
         <p className="text-gray-600 mb-8 text-center">
-          Welcome back : {" "}
-          <span className="font-semibold text-gray-900">
-            {fullName.split(" ")[0]}
-          </span>
-          !
+          Welcome back, <span className="font-semibold text-gray-900">{firstName}</span>!
         </p>
 
-        {/* Candidate Form */}
         {role === "candidate" ? (
           <>
-            <form onSubmit={handleSave} className="space-y-5">
-              {[
-                ["Full Name", "full_name", true],
-                ["Phone Number", "phone", false],
-                ["Email", "email", true],
-              ].map(([label, key, readOnly]) => (
-                <div key={key}>
-                  <label className="block text-gray-700 font-medium mb-2">
-                    {label}
-                  </label>
-                  <input
-                    type="text"
-                    value={formData[key]}
-                    readOnly={readOnly}
-                    onChange={(e) =>
-                      setFormData({ ...formData, [key]: e.target.value })
-                    }
-                    className={`border border-gray-300 w-full p-3 rounded-lg transition focus:ring-2 focus:ring-blue-500 ${
-                      readOnly
-                        ? "bg-gray-100 cursor-not-allowed"
-                        : "focus:border-blue-400"
-                    }`}
-                  />
-                </div>
-              ))}
+            <ProfileForm
+              formData={formData}
+              setFormData={setFormData}
+              handleSave={handleSave}
+              loading={loading}
+            />
 
-              {[
-                ["Education", "education"],
-                ["Experience", "experience"],
-                ["Skills", "skills"],
-              ].map(([label, key]) => (
-                <div key={key}>
-                  <label className="block text-gray-700 font-medium mb-2">
-                    {label}
-                  </label>
-                  <textarea
-                    value={formData[key]}
-                    onChange={(e) =>
-                      setFormData({ ...formData, [key]: e.target.value })
-                    }
-                    rows="2"
-                    className="border border-gray-300 w-full p-3 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              ))}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className={`w-full py-3 rounded-lg text-white font-semibold transition ${
-                  loading
-                    ? "bg-blue-400 cursor-not-allowed"
-                    : "bg-blue-600 hover:bg-blue-700"
-                }`}
-              >
-                {loading ? "Saving..." : "Save Profile"}
-              </button>
-            </form>
-
-            {/* Resume Section */}
-            <div className="mt-10 border-t pt-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                <FileText className="text-blue-600" /> Resume
-              </h3>
-              <div className="border-2 border-dashed border-blue-300 rounded-xl p-6 bg-blue-50 text-center">
-                <input
-                  type="file"
-                  accept=".pdf,.doc,.docx"
-                  onChange={(e) => setResumeFile(e.target.files[0])}
-                  className="hidden"
-                  id="resume-upload"
-                />
-
-                <label
-                  htmlFor="resume-upload"
-                  className="cursor-pointer bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"
-                >
-                  <Upload size={20} />
-                  {resumeFile ? "Change File" : "Select File"}
-                </label>
-
-                {resumeFileName && (
-                  <p className="mt-3 text-gray-700">
-                    📎 <strong>{resumeFileName}</strong>
-                  </p>
-                )}
-
-                <div className="mt-4 flex flex-col sm:flex-row gap-3 justify-center">
-                  <button
-                    onClick={handleResumeUpload}
-                    disabled={loading}
-                    className={`flex-1 py-3 rounded-lg text-white font-semibold ${
-                      loading
-                        ? "bg-blue-400 cursor-not-allowed"
-                        : "bg-blue-600 hover:bg-blue-700"
-                    }`}
-                  >
-                    {loading ? "Uploading..." : "Upload Resume"}
-                  </button>
-
-                  {resumeUrl && (
-                    <>
-                      <button
-                        onClick={() => setShowResume(true)}
-                        className="flex-1 py-3 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700"
-                      >
-                        📄 View Resume
-                      </button>
-                      <button
-                        onClick={handleRemoveResume}
-                        disabled={loading}
-                        className="flex-1 py-3 rounded-lg bg-red-500 text-white font-semibold hover:bg-red-600"
-                      >
-                        <Trash2 size={18} className="inline mr-1" /> Remove
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
+            <ResumeSection
+              resumeFile={resumeFile}
+              setResumeFile={setResumeFile}
+              resumeFileName={resumeFileName}
+              resumeUrl={resumeUrl}
+              showResume={showResume}
+              setShowResume={setShowResume}
+              handleResumeUpload={handleResumeUpload}
+              handleRemoveResume={handleRemoveResume}
+              loading={loading}
+            />
           </>
         ) : (
-          // Recruiter Section
-          <motion.div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center shadow-inner">
-            <h2 className="text-2xl font-semibold text-green-700 mb-3">
-              Recruiter Tools
-            </h2>
-            <p className="text-gray-600 mb-4">
-              View candidate applications, manage job postings, and contact applicants directly.
-            </p>
-            <button
-              onClick={() => navigate("/candidates")}
-              className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition"
-            >
-              View Candidates
-            </button>
-          </motion.div>
+          <RecruiterTools navigate={navigate} />
         )}
       </motion.div>
 
-      {/* Resume Modal */}
-      <AnimatePresence>
-        {showResume && resumeUrl && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
-          >
-            <motion.div
-              initial={{ y: 50, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 50, opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="bg-white rounded-2xl shadow-2xl w-[95%] max-w-3xl h-[90%] sm:w-[80%] sm:h-[80%] relative overflow-hidden"
-            >
-              <button
-                onClick={() => setShowResume(false)}
-                className="absolute top-3 right-3 bg-red-500 text-white rounded-full w-9 h-9 flex items-center justify-center hover:bg-red-600"
-              >
-                <X size={20} />
-              </button>
-              <iframe src={resumeUrl} title="Resume Preview" className="w-full h-full rounded-2xl" />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <ResumeModal show={showResume} setShow={setShowResume} resumeUrl={resumeUrl} />
     </div>
   );
 }
 
-// ✅ Stacked Toast System
+function ProfileForm({ formData, setFormData, handleSave, loading }) {
+  return (
+    <form onSubmit={handleSave} className="space-y-5">
+      {[
+        ["Full Name", "full_name", true],
+        ["Email", "email", true],
+        ["Phone Number", "phone", false],
+      ].map(([label, key, readOnly]) => (
+        <div key={key}>
+          <label className="block text-gray-700 font-medium mb-2">{label}</label>
+          <input
+            type="text"
+            value={formData[key]}
+            readOnly={readOnly}
+            onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
+            className={`border border-gray-300 w-full p-3 rounded-lg transition focus:ring-2 focus:ring-blue-500 ${
+              readOnly ? "bg-gray-100 cursor-not-allowed" : "focus:border-blue-400"
+            }`}
+          />
+        </div>
+      ))}
+
+      {[
+        ["Education", "education"],
+        ["Experience", "experience"],
+        ["Skills", "skills"],
+      ].map(([label, key]) => (
+        <div key={key}>
+          <label className="block text-gray-700 font-medium mb-2">{label}</label>
+          <textarea
+            value={formData[key]}
+            onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
+            rows="2"
+            className="border border-gray-300 w-full p-3 rounded-lg focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      ))}
+
+      <button
+        type="submit"
+        disabled={loading}
+        className={`w-full py-3 rounded-lg text-white font-semibold transition ${
+          loading ? "bg-blue-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+        }`}
+      >
+        {loading ? "Saving..." : "Save Profile"}
+      </button>
+    </form>
+  );
+}
+
+function ResumeSection({
+  resumeFile,
+  setResumeFile,
+  resumeFileName,
+  resumeUrl,
+  showResume,
+  setShowResume,
+  handleResumeUpload,
+  handleRemoveResume,
+  loading,
+}) {
+  return (
+    <div className="mt-10 border-t pt-6">
+      <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+        <FileText className="text-blue-600" /> Resume
+      </h3>
+      <div className="border-2 border-dashed border-blue-300 rounded-xl p-6 bg-blue-50 text-center">
+        <input
+          type="file"
+          accept=".pdf,.doc,.docx"
+          onChange={(e) => setResumeFile(e.target.files[0])}
+          className="hidden"
+          id="resume-upload"
+        />
+
+        <label
+          htmlFor="resume-upload"
+          className="cursor-pointer bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 inline-flex items-center gap-2"
+        >
+          <Upload size={20} />
+          {resumeFile ? "Change File" : "Select File"}
+        </label>
+
+        {resumeFileName && (
+          <p className="mt-3 text-gray-700">📎 <strong>{resumeFileName}</strong></p>
+        )}
+
+        <div className="mt-4 flex flex-col sm:flex-row gap-3 justify-center">
+          <button
+            onClick={handleResumeUpload}
+            disabled={loading}
+            className={`flex-1 py-3 rounded-lg text-white font-semibold ${
+              loading ? "bg-blue-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+            }`}
+          >
+            {loading ? "Uploading..." : "Upload Resume"}
+          </button>
+
+          {resumeUrl && (
+            <>
+              <button
+                onClick={() => setShowResume(true)}
+                className="flex-1 py-3 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700"
+              >
+                📄 View Resume
+              </button>
+              <button
+                onClick={handleRemoveResume}
+                disabled={loading}
+                className="flex-1 py-3 rounded-lg bg-red-500 text-white font-semibold hover:bg-red-600"
+              >
+                <Trash2 size={18} className="inline mr-1" /> Remove
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ResumeModal({ show, setShow, resumeUrl }) {
+  return (
+    <AnimatePresence>
+      {show && resumeUrl && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
+        >
+          <motion.div
+            initial={{ y: 50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 50, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="bg-white rounded-2xl shadow-2xl w-[95%] max-w-3xl h-[90%] sm:w-[80%] sm:h-[80%] relative overflow-hidden"
+          >
+            <button
+              onClick={() => setShow(false)}
+              className="absolute top-3 right-3 bg-red-500 text-white rounded-full w-9 h-9 flex items-center justify-center hover:bg-red-600"
+            >
+              <X size={20} />
+            </button>
+            <iframe src={resumeUrl} title="Resume Preview" className="w-full h-full rounded-2xl" />
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function RecruiterTools({ navigate }) {
+  return (
+    <motion.div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center shadow-inner">
+      <h2 className="text-2xl font-semibold text-green-700 mb-3">
+        Recruiter Tools
+      </h2>
+      <p className="text-gray-600 mb-4">
+        View candidate applications, manage job postings, and contact applicants directly.
+      </p>
+      <button
+        onClick={() => navigate("/candidates")}
+        className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition"
+      >
+        View Candidates
+      </button>
+    </motion.div>
+  );
+}
+
+// ✅ Toast Notification System
 function toast(message, type = "info") {
   let container = document.getElementById("toast-container");
   if (!container) {
     container = document.createElement("div");
     container.id = "toast-container";
-    container.className =
-      "fixed bottom-6 right-6 flex flex-col gap-3 items-end z-[9999]";
+    container.className = "fixed bottom-6 right-6 flex flex-col gap-3 items-end z-[9999]";
     document.body.appendChild(container);
   }
 
@@ -404,10 +454,8 @@ function toast(message, type = "info") {
     text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-lg
     animate-slide-up ${colors[type] || colors.info}
   `;
-
   container.prepend(el);
 
-  // Auto remove after delay
   setTimeout(() => {
     el.style.transition = "opacity 0.5s, transform 0.5s";
     el.style.opacity = "0";
@@ -416,7 +464,6 @@ function toast(message, type = "info") {
   }, 2500);
 }
 
-// Inject keyframes if missing
 if (!document.getElementById("toast-anim-style")) {
   const style = document.createElement("style");
   style.id = "toast-anim-style";
@@ -425,9 +472,7 @@ if (!document.getElementById("toast-anim-style")) {
     from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
   }
-  .animate-slide-up {
-    animation: slide-up 0.4s ease-out;
-  }
+  .animate-slide-up { animation: slide-up 0.4s ease-out; }
   `;
   document.head.appendChild(style);
 }
