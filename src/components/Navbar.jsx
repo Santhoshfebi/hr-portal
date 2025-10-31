@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Menu, X, LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -8,12 +8,10 @@ export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
-  // Fetch user & listen for auth changes
+  /* ---------------- Fetch user ---------------- */
   useEffect(() => {
     const getUser = async () => {
       setLoadingUser(true);
@@ -23,55 +21,34 @@ export default function Navbar() {
     };
     getUser();
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) =>
-      setUser(session?.user || null)
-    );
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null);
+    });
 
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  // Handle logout
+  /* ---------------- Handle Logout ---------------- */
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null);
-    setDropdownOpen(false);
-    navigate("/");
+    navigate("/auth");
   };
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // Add scroll effect
+  /* ---------------- Scroll Shadow ---------------- */
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const fullName = user?.user_metadata?.full_name || "User";
-  const avatarUrl = useMemo(
-    () =>
-      user?.user_metadata?.avatar_url ||
-      `https://api.dicebear.com/8.x/initials/svg?seed=${fullName}`,
-    [user, fullName]
-  );
-
+  /* ---------------- Component Render ---------------- */
   return (
     <motion.nav
       initial={false}
       animate={{
         height: scrolled ? 60 : 80,
-        boxShadow: scrolled
-          ? "0 2px 8px rgba(0,0,0,0.05)"
-          : "0 0 0 rgba(0,0,0,0)",
+        boxShadow: scrolled ? "0 2px 8px rgba(0,0,0,0.05)" : "none",
       }}
       transition={{ duration: 0.25 }}
       className="fixed top-0 left-0 w-full z-50 backdrop-blur-sm border-b border-gray-100 bg-white/80"
@@ -101,9 +78,9 @@ export default function Navbar() {
             </Link>
           )}
 
-          {/* Auth / Profile */}
+          {/* Show Login button only if not logged in */}
           {loadingUser ? (
-            <div className="w-9 h-9 rounded-full bg-gray-200 animate-pulse" />
+            <div className="w-9 h-4 rounded bg-gray-200 animate-pulse" />
           ) : !user ? (
             <Link
               to="/auth"
@@ -112,56 +89,12 @@ export default function Navbar() {
               Login
             </Link>
           ) : (
-            <div className="relative" ref={dropdownRef}>
-              {/* Profile Dropdown Button */}
-              <button
-                onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="flex items-center gap-2 focus:outline-none"
-              >
-                <img
-                  src={avatarUrl}
-                  alt="Profile"
-                  className="w-9 h-9 rounded-full object-cover border border-blue-200"
-                />
-                <span className="text-gray-700 font-medium hidden md:block">
-                  {fullName.split(" ")[0]}
-                </span>
-              </button>
-
-              {/* Dropdown Menu */}
-              <AnimatePresence>
-                {dropdownOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: -5 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: -5 }}
-                    transition={{ duration: 0.2, ease: "easeOut" }}
-                    className="absolute right-0 mt-3 w-48 bg-white shadow-lg rounded-lg border border-gray-100 py-2 origin-top-right"
-                  >
-                    <Link
-                      to="/candidate-profile"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50"
-                      onClick={() => setDropdownOpen(false)}
-                    >
-                      Candidate Profile
-                    </Link>
-                    <Link
-                      to="/dashboard"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50"
-                      onClick={() => setDropdownOpen(false)}
-                    >
-                      Dashboard
-                    </Link>
-                    <button
-                      onClick={handleLogout}
-                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
-                    >
-                      <LogOut size={16} /> Logout
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+            <button
+              onClick={handleLogout}
+              className="text-red-600 hover:text-red-700 transition text-sm flex items-center gap-1"
+            >
+              <LogOut size={16} /> Logout
+            </button>
           )}
         </div>
 
@@ -195,22 +128,13 @@ export default function Navbar() {
               </Link>
 
               {user && (
-                <>
-                  <Link
-                    to="/dashboard"
-                    className="text-gray-700 hover:text-blue-600 transition"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    Dashboard
-                  </Link>
-                  <Link
-                    to="/candidate-profile"
-                    className="text-gray-700 hover:text-blue-600 transition"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    Candidate Profile
-                  </Link>
-                </>
+                <Link
+                  to="/dashboard"
+                  className="text-gray-700 hover:text-blue-600 transition"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Dashboard
+                </Link>
               )}
 
               {!user ? (
@@ -223,10 +147,13 @@ export default function Navbar() {
                 </Link>
               ) : (
                 <button
-                  onClick={handleLogout}
-                  className="text-red-600 hover:text-red-700 transition text-left"
+                  onClick={() => {
+                    handleLogout();
+                    setIsOpen(false);
+                  }}
+                  className="text-red-600 hover:text-red-700 transition text-left flex items-center gap-1"
                 >
-                  Logout
+                  <LogOut size={16} /> Logout
                 </button>
               )}
             </div>

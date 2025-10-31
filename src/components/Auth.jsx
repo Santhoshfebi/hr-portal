@@ -22,10 +22,13 @@ export default function Auth() {
     };
     checkSession();
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) navigate("/dashboard", { replace: true });
-    });
-    return () => listener.subscription.unsubscribe();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (session?.user) navigate("/dashboard", { replace: true });
+      }
+    );
+
+    return () => subscription.unsubscribe();
   }, [navigate]);
 
   // ✅ Handle login/signup
@@ -34,6 +37,8 @@ export default function Auth() {
     setLoading(true);
     setMessage({ text: "", type: "" });
 
+    const currentRole = role; // 🔒 snapshot to avoid async role mismatch
+
     try {
       if (isLogin) {
         // 🔹 LOGIN FLOW
@@ -41,7 +46,9 @@ export default function Auth() {
           email,
           password,
         });
+
         if (error) throw error;
+
         if (!data.session) {
           setMessage({
             text: "Please verify your email before logging in.",
@@ -49,6 +56,7 @@ export default function Auth() {
           });
           return;
         }
+
         setMessage({ text: "✅ Logged in successfully!", type: "success" });
       } else {
         // 🔹 SIGNUP FLOW
@@ -56,37 +64,54 @@ export default function Auth() {
           email,
           password,
           options: {
-            data: { role, full_name: fullName, phone },
+            data: { role: currentRole, full_name: fullName, phone },
           },
         });
-        if (error) throw error;
 
+        if (error) throw error;
         const user = data?.user;
+
         if (user) {
-          // ✅ Store details in 'profiles' table
-          const { error: profileError } = await supabase.from("profiles").insert([
-            {
-              id: user.id,
-              email,
-              full_name: fullName,
-              phone,
-              role,
-              created_at: new Date(),
-            },
-          ]);
-          if (profileError) console.error("Profile insert error:", profileError.message);
+          // ✅ Check if profile already exists
+          const { data: existingProfile } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("id", user.id)
+            .single();
+
+          if (!existingProfile) {
+            const { error: profileError } = await supabase
+              .from("profiles")
+              .insert([
+                {
+                  id: user.id,
+                  email,
+                  full_name: fullName,
+                  phone,
+                  role: currentRole,
+                  created_at: new Date(),
+                },
+              ]);
+
+            if (profileError)
+              console.error("Profile insert error:", profileError.message);
+          }
 
           // ✅ If candidate, create initial record in 'candidates'
-          if (role === "candidate") {
-            const { error: candidateError } = await supabase.from("candidates").insert([
-              {
-                user_id: user.id,
-                email,
-                phone,
-                full_name: fullName,
-              },
-            ]);
-            if (candidateError) console.error("Candidate insert error:", candidateError.message);
+          if (currentRole === "candidate") {
+            const { error: candidateError } = await supabase
+              .from("candidates")
+              .insert([
+                {
+                  user_id: user.id,
+                  email,
+                  phone,
+                  full_name: fullName,
+                },
+              ]);
+
+            if (candidateError)
+              console.error("Candidate insert error:", candidateError.message);
           }
         }
 
@@ -95,14 +120,18 @@ export default function Auth() {
           type: "success",
         });
 
-        // Reset form fields
+        // Reset fields
         setFullName("");
         setPhone("");
         setEmail("");
         setPassword("");
       }
     } catch (error) {
-      setMessage({ text: error.message, type: "error" });
+      console.error("Auth error:", error.message);
+      const friendlyMessage = error.message.includes("Invalid login credentials")
+        ? "Incorrect email or password."
+        : error.message;
+      setMessage({ text: friendlyMessage, type: "error" });
     } finally {
       setLoading(false);
     }
@@ -113,7 +142,7 @@ export default function Auth() {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
         className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8"
       >
         <h2 className="text-3xl font-extrabold text-center text-blue-700 mb-2">
@@ -155,7 +184,7 @@ export default function Auth() {
           </div>
         )}
 
-        {/* ✅ Feedback message */}
+        {/* ✅ Feedback Message */}
         {message.text && (
           <div
             className={`text-center p-2 rounded-md mb-4 ${
