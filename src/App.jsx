@@ -5,9 +5,10 @@ import Auth from "./components/Auth";
 import Dashboard from "./pages/Dashboard";
 import CandidateDashboard from "./pages/CandidateDashboard";
 import RecruiterDashboard from "./pages/RecruiterDashboard";
-import Footer from "./components/Footer";
+// import Footer from "./components/Footer";
 import Candidates from "./pages/Candidates";
-import CandidateProfile from "./pages/CandidateProfile";
+// import CandidateProfile from "./pages/CandidateProfile";
+import ResetPassword from "./pages/ResetPassword";
 
 export default function App() {
   return (
@@ -20,9 +21,10 @@ export default function App() {
         <Route path="/candidate" element={<CandidateDashboard />} />
         <Route path="/recruiter" element={<RecruiterDashboard />} />
         <Route path="/candidates" element={<Candidates />} />
-        <Route path="/candidate-profile" element={<CandidateProfile />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        {/* <Route path="/candidate-profile" element={<CandidateProfile />} /> */}
       </Routes>
-      <Footer />
+      {/* <Footer /> */}
     </Router>
   );
 }

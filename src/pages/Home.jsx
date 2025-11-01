@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Briefcase, UploadCloud, UserPlus, Quote } from "lucide-react";
+import { Briefcase, UploadCloud, UserPlus, Quote } from "lucide-react";   
+import Footer from "../components/Footer";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
@@ -13,6 +14,7 @@ const fadeUp = {
 
 export default function Home() {
   return (
+    <>
     <section className="relative flex flex-col items-center justify-center text-center min-h-screen bg-linear-to-b from-blue-50 to-white overflow-hidden">
       {/* Decorative background shapes */}
       <div className="absolute -top-40 -left-40 w-80 h-80 bg-blue-100 rounded-full blur-3xl opacity-20"></div>
@@ -175,8 +177,12 @@ export default function Home() {
         </motion.div>
       </div>
     </section>
+    <Footer />
+    </>
   );
 }
+
+<Footer />
 
 const features = [
   {

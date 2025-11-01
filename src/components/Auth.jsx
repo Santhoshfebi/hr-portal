@@ -31,13 +31,40 @@ export default function Auth() {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
+  // ✅ Forgot password flow
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setMessage({ text: "Please enter your email address first.", type: "error" });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) throw error;
+
+      setMessage({
+        text: "📧 Password reset link sent! Please check your email.",
+        type: "success",
+      });
+    } catch (err) {
+      console.error("Password reset error:", err.message);
+      setMessage({ text: err.message || "Failed to send reset email.", type: "error" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // ✅ Handle login/signup
   const handleAuth = async (e) => {
     e.preventDefault();
     setLoading(true);
     setMessage({ text: "", type: "" });
 
-    const currentRole = role; // 🔒 snapshot to avoid async role mismatch
+    const currentRole = role;
 
     try {
       if (isLogin) {
@@ -72,7 +99,7 @@ export default function Auth() {
         const user = data?.user;
 
         if (user) {
-          // ✅ Check if profile already exists
+          // ✅ Check if profile exists
           const { data: existingProfile } = await supabase
             .from("profiles")
             .select("id")
@@ -97,7 +124,7 @@ export default function Auth() {
               console.error("Profile insert error:", profileError.message);
           }
 
-          // ✅ If candidate, create initial record in 'candidates'
+          // ✅ If candidate, create candidate record
           if (currentRole === "candidate") {
             const { error: candidateError } = await supabase
               .from("candidates")
@@ -120,7 +147,7 @@ export default function Auth() {
           type: "success",
         });
 
-        // Reset fields
+        // Reset form
         setFullName("");
         setPhone("");
         setEmail("");
@@ -262,11 +289,22 @@ export default function Auth() {
                   ? "Login"
                   : "Create Account"}
               </button>
+
+              {/* ✅ Forgot Password Button */}
+              {isLogin && (
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  className="mt-3 w-full text-sm text-blue-600 hover:underline"
+                >
+                  Forgot Password ? We got Your Back :) 
+                </button>
+              )}
             </div>
           </motion.form>
         </AnimatePresence>
 
-        {/* Toggle between login/signup */}
+        {/* ✅ Toggle between login/signup */}
         <div className="text-center mt-6">
           <p className="text-gray-600">
             {isLogin ? "Don't have an account?" : "Already have an account?"}
@@ -283,3 +321,4 @@ export default function Auth() {
     </div>
   );
 }
+ 

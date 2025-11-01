@@ -1,46 +1,37 @@
-// src/components/Sidebar.jsx
 import { motion } from "framer-motion";
 import {
-  LayoutDashboard,
-  User,
-  FileText,
-  Briefcase,
-  Settings,
   LogOut,
+  Settings,
+  LayoutDashboard,
+  Briefcase,
+  User2,
+  Users,
   ChevronLeft,
   ChevronRight,
   X,
 } from "lucide-react";
 import SidebarNavItem from "./SidebarNavItem";
-import { Tooltip } from "react-tooltip";
 
-export default function Sidebar({
+/**
+ * SidebarRecruiter.jsx
+ * Sidebar for Recruiter Dashboard — consistent with Candidate version
+ */
+
+export default function SidebarRecruiter({
   open,
   collapsed,
-  userInfo = {},
+  userInfo,
   activeTab,
   onTabChange,
   onToggleCollapse,
   onCloseMobile,
   onLogout,
-  toast,
 }) {
-  const { name = "User", email = "", avatar } = userInfo;
-
-  const initials = name
-    ? name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .slice(0, 2)
-      .toUpperCase()
-    : "U";
-
   const navItems = [
     { id: "overview", label: "Overview", icon: LayoutDashboard },
-    { id: "profile", label: "Profile", icon: User },
-    { id: "resume", label: "Resume", icon: FileText },
-    { id: "applications", label: "Applications", icon: Briefcase },
+    { id: "profile", label: "Profile", icon: User2 },
+    { id: "jobs", label: "Job Posts", icon: Briefcase },
+    { id: "applicants", label: "Applicants", icon: Users },
   ];
 
   return (
@@ -57,26 +48,17 @@ export default function Sidebar({
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100">
           <div className="flex items-center gap-3">
-            {avatar ? (
-              <img
-                src={avatar}
-                alt="User avatar"
-                className="w-10 h-10 rounded-full border border-gray-200 object-cover"
-              />
-            ) : (
-              <div className="w-10 h-10 flex items-center justify-center bg-gray-200 text-gray-600 rounded-full font-semibold">
-                {initials}
-              </div>
-            )}
-
+            <img
+              src={userInfo.avatar}
+              alt="Recruiter Avatar"
+              className="w-10 h-10 rounded-full border border-gray-200 object-cover"
+            />
             {!collapsed && (
               <div>
-                <div className="font-semibold text-gray-800 text-sm leading-tight truncate max-w-[140px]">
-                  {name}
+                <div className="font-semibold text-gray-800 text-sm leading-tight">
+                  {userInfo.name || "Recruiter"}
                 </div>
-                <div className="text-xs text-gray-500 truncate max-w-[140px]">
-                  {email}
-                </div>
+                <div className="text-xs text-gray-500">{userInfo.email}</div>
               </div>
             )}
           </div>
@@ -95,25 +77,21 @@ export default function Sidebar({
             onClick={onCloseMobile}
             className="lg:hidden flex items-center justify-center p-1 rounded-md text-gray-600 hover:bg-gray-50"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
-        {/* Navigation */}
+        {/* Nav Links */}
         <nav className="flex-1 overflow-y-auto py-4">
           {navItems.map((item) => (
-            <div key={item.id} data-tooltip-id={collapsed ? `tip-${item.id}` : undefined}>
-              <SidebarNavItem
-                label={item.label}
-                icon={item.icon}
-                active={activeTab === item.id}
-                onClick={() => onTabChange(item.id)}
-                collapsed={collapsed}
-              />
-              {collapsed && (
-                <Tooltip id={`tip-${item.id}`} place="rigt" content={item.label} />
-              )}
-            </div>
+            <SidebarNavItem
+              key={item.id}
+              label={item.label}
+              icon={item.icon}
+              active={activeTab === item.id}
+              onClick={() => onTabChange(item.id)}
+              collapsed={collapsed}
+            />
           ))}
         </nav>
 
@@ -126,6 +104,7 @@ export default function Sidebar({
             active={activeTab === "settings"}
             onClick={() => onTabChange("settings")}
           />
+
           <SidebarNavItem
             label="Logout"
             icon={LogOut}
@@ -133,13 +112,6 @@ export default function Sidebar({
             onClick={onLogout}
           />
         </div>
-
-        {/* Footer text */}
-        {!collapsed && (
-          <div className="text-center text-xs text-gray-500 py-2 border-t border-gray-100">
-            Candidate Portal • Professional View
-          </div>
-        )}
       </div>
     </motion.aside>
   );
