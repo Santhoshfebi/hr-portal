@@ -13,7 +13,6 @@ import {
 import SidebarNavItem from "./SidebarNavItem";
 
 /**
- * SidebarRecruiter.jsx
  * Sidebar for Recruiter Dashboard — consistent with Candidate version
  */
 
@@ -32,6 +31,7 @@ export default function SidebarRecruiter({
     { id: "profile", label: "Profile", icon: User2 },
     { id: "jobs", label: "Job Posts", icon: Briefcase },
     { id: "applicants", label: "Applicants", icon: Users },
+    { id: "candidates", label: "Candidates", icon: Users },
   ];
 
   return (
