@@ -30,7 +30,7 @@ export default function Sidebar({
     { id: "profile", label: "Profile", icon: User },
     { id: "resume", label: "Resume", icon: FileText },
     { id: "browse", label: "Browse Jobs", icon: Briefcase },
-    { id: "applications", label: "Applications", icon: Briefcase },
+    { id: "applications", label: "My Applications", icon: Briefcase },
   ];
 
   return (

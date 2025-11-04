@@ -21,6 +21,28 @@ export default function JobPostings({ user, toast }) {
   useEffect(() => {
     if (!user) return;
     fetchJobs();
+
+    // 🔥 Realtime listener for updates (applicant count, edits, etc.)
+    const channel = supabase
+      .channel("jobs-updates")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "jobs",
+          filter: `recruiter_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log("Realtime update:", payload);
+          fetchJobs(); // Refresh jobs list
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const fetchJobs = async () => {
@@ -80,22 +102,26 @@ export default function JobPostings({ user, toast }) {
         toast("Job added successfully!", "success");
       }
 
-      setForm({
-        id: null,
-        title: "",
-        description: "",
-        location: "",
-        company_name: "",
-        salary_range: "",
-        status: "Open",
-      });
-      setShowForm(false);
-      setIsEditing(false);
+      resetForm();
       fetchJobs();
     } catch (err) {
       console.error("Save job error:", err);
       toast("Unable to save job.", "error");
     }
+  };
+
+  const resetForm = () => {
+    setForm({
+      id: null,
+      title: "",
+      description: "",
+      location: "",
+      company_name: "",
+      salary_range: "",
+      status: "Open",
+    });
+    setShowForm(false);
+    setIsEditing(false);
   };
 
   /* ---------------- Delete Job ---------------- */
@@ -112,7 +138,7 @@ export default function JobPostings({ user, toast }) {
     }
   };
 
-  /* ---------------- Open Edit Modal ---------------- */
+  /* ---------------- Edit ---------------- */
   const handleEdit = (job) => {
     setForm({
       id: job.id,
@@ -127,7 +153,6 @@ export default function JobPostings({ user, toast }) {
     setShowForm(true);
   };
 
-  /* ---------------- Helper: Format Date ---------------- */
   const formatDate = (dateStr) => {
     if (!dateStr) return "—";
     const date = new Date(dateStr);
@@ -154,16 +179,7 @@ export default function JobPostings({ user, toast }) {
         <h1 className="text-2xl font-semibold text-gray-800">Job Postings</h1>
         <button
           onClick={() => {
-            setForm({
-              id: null,
-              title: "",
-              description: "",
-              location: "",
-              company_name: "",
-              salary_range: "",
-              status: "Open",
-            });
-            setIsEditing(false);
+            resetForm();
             setShowForm(true);
           }}
           className="flex items-center gap-2 bg-sky-600 text-white px-4 py-2 rounded-lg hover:bg-sky-700 transition"
@@ -196,7 +212,7 @@ export default function JobPostings({ user, toast }) {
                 📍 {job.location || "Location not specified"}
               </p>
               <p className="text-sm text-gray-500">
-                🏢 {job.company_name || "—"}{" "}
+                🏢 {job.company_name || "—"}
               </p>
               <p className="text-sm text-gray-500">
                 💰 {job.salary_range || "Not specified"}
@@ -215,7 +231,7 @@ export default function JobPostings({ user, toast }) {
             <div className="mt-4 flex items-center justify-between text-sm text-gray-500">
               <div className="flex items-center gap-2">
                 <Users size={15} className="text-sky-600" />
-                {job.applicant_count || 0} applicants
+                {job.applicant_count ?? 0} applicants
               </div>
               <div className="flex items-center gap-1">
                 <Clock size={14} />
@@ -241,7 +257,7 @@ export default function JobPostings({ user, toast }) {
         ))}
       </div>
 
-      {/* Modal Form (for Add/Edit) */}
+      {/* Modal Form */}
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-lg w-full max-w-md p-6 relative">
@@ -328,10 +344,7 @@ export default function JobPostings({ user, toast }) {
               <div className="flex justify-end gap-3 pt-4">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowForm(false);
-                    setIsEditing(false);
-                  }}
+                  onClick={resetForm}
                   className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
                 >
                   Cancel

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Upload, Eye, Trash2, FileText, FileType } from "lucide-react";
+import { Upload, Trash2, FileText, FileType } from "lucide-react";
 import { supabase } from "../supabaseClient";
 
 export default function CandidateResume({ user, formData, setFormData, toast }) {
@@ -39,9 +39,9 @@ export default function CandidateResume({ user, formData, setFormData, toast }) 
       const { data } = supabase.storage.from("resumes").getPublicUrl(filePath);
       const publicUrl = `${data.publicUrl}?t=${Date.now()}`;
 
-
-      // Update candidate table
-      const { error: dbError } = await supabase
+      // ---------------- Update both tables ----------------
+      // Update in candidates table
+      const { error: candErr } = await supabase
         .from("candidates")
         .update({
           resume_url: publicUrl,
@@ -49,9 +49,20 @@ export default function CandidateResume({ user, formData, setFormData, toast }) 
         })
         .eq("user_id", user.id);
 
-      if (dbError) throw dbError;
+      if (candErr) throw candErr;
 
-      // Update local state instantly
+      // Update in profiles table
+      const { error: profErr } = await supabase
+        .from("profiles")
+        .update({
+          resume_url: publicUrl,
+          resume_name: resumeFile.name,
+        })
+        .eq("id", user.id); // or .eq("user_id", user.id) if your profiles table uses that column
+
+      if (profErr) throw profErr;
+
+      // Update local state
       setFormData((prev) => ({
         ...prev,
         resume_url: publicUrl,
@@ -85,12 +96,18 @@ export default function CandidateResume({ user, formData, setFormData, toast }) 
         .remove([path]);
       if (removeErr) throw removeErr;
 
-      // Update DB
-      const { error: dbError } = await supabase
+      // Remove from both tables
+      const { error: candErr } = await supabase
         .from("candidates")
-        .update({ resume_url: null, resume_name: null})
+        .update({ resume_url: null, resume_name: null })
         .eq("user_id", user.id);
-      if (dbError) throw dbError;
+      if (candErr) throw candErr;
+
+      const { error: profErr } = await supabase
+        .from("profiles")
+        .update({ resume_url: null, resume_name: null })
+        .eq("id", user.id);
+      if (profErr) throw profErr;
 
       // Update UI
       setFormData((prev) => ({
@@ -106,18 +123,6 @@ export default function CandidateResume({ user, formData, setFormData, toast }) 
     } finally {
       setDeleting(false);
     }
-  };
-
-  // Helper: format "x mins ago"
-  const timeAgo = (timestamp) => {
-    if (!timestamp) return "";
-    const diff = Math.floor((Date.now() - new Date(timestamp)) / 60000);
-    if (diff < 1) return "just now";
-    if (diff < 60) return `${diff} min${diff > 1 ? "s" : ""} ago`;
-    const hours = Math.floor(diff / 60);
-    if (hours < 24) return `${hours} hr${hours > 1 ? "s" : ""} ago`;
-    const days = Math.floor(hours / 24);
-    return `${days} day${days > 1 ? "s" : ""} ago`;
   };
 
   const fileIcon =
@@ -191,16 +196,14 @@ export default function CandidateResume({ user, formData, setFormData, toast }) 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-gray-50 border p-4 rounded-lg">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 text-sm text-gray-700">
             {fileIcon}
-            <div>
-              <a
-                href={formData.resume_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sky-600 hover:underline font-medium"
-              >
-                {formData.resume_name || "View Uploaded Resume"}
-              </a>
-            </div>
+            <a
+              href={formData.resume_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sky-600 hover:underline font-medium"
+            >
+              {formData.resume_name || "View Uploaded Resume"}
+            </a>
           </div>
 
           <button

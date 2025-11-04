@@ -6,6 +6,7 @@ import CandidateProfile from "../components/CandidateProfile";
 import CandidateResume from "../components/CandidateResume";
 import CandidateSettings from "../components/CandidateSettings";
 import BrowseJobs from "../components/BrowseJobs";
+import CandidateApplications from "../components/CandidateApplications";
 import { Menu } from "lucide-react";
 
 function toast(message, type = "info") {
@@ -303,6 +304,10 @@ export default function CandidateDashboard() {
               setFormData={setFormData}
               toast={toast}
             />
+          )}
+
+          {activeTab === "applications" && (
+            <CandidateApplications user={user} toast={toast} />
           )}
 
           {activeTab === "settings" && (
