@@ -11,6 +11,9 @@ export default function JobPostings({ user, toast }) {
     id: null,
     title: "",
     description: "",
+    location: "",
+    company_name: "",
+    salary_range: "",
     status: "Open",
   });
 
@@ -25,7 +28,9 @@ export default function JobPostings({ user, toast }) {
     try {
       const { data, error } = await supabase
         .from("jobs")
-        .select("id, title, description, status, created_at, updated_at, applicant_count")
+        .select(
+          "id, title, description, location, company_name, salary_range, status, applicant_count, created_at, updated_at"
+        )
         .eq("recruiter_id", user.id)
         .order("created_at", { ascending: false });
 
@@ -49,6 +54,9 @@ export default function JobPostings({ user, toast }) {
           .update({
             title: form.title,
             description: form.description,
+            location: form.location,
+            company_name: form.company_name,
+            salary_range: form.salary_range,
             status: form.status,
           })
           .eq("id", form.id)
@@ -62,6 +70,9 @@ export default function JobPostings({ user, toast }) {
             recruiter_id: user.id,
             title: form.title,
             description: form.description,
+            location: form.location,
+            company_name: form.company_name,
+            salary_range: form.salary_range,
             status: form.status,
           },
         ]);
@@ -69,7 +80,15 @@ export default function JobPostings({ user, toast }) {
         toast("Job added successfully!", "success");
       }
 
-      setForm({ id: null, title: "", description: "", status: "Open" });
+      setForm({
+        id: null,
+        title: "",
+        description: "",
+        location: "",
+        company_name: "",
+        salary_range: "",
+        status: "Open",
+      });
       setShowForm(false);
       setIsEditing(false);
       fetchJobs();
@@ -99,6 +118,9 @@ export default function JobPostings({ user, toast }) {
       id: job.id,
       title: job.title,
       description: job.description,
+      location: job.location,
+      company_name: job.company_name,
+      salary_range: job.salary_range,
       status: job.status,
     });
     setIsEditing(true);
@@ -132,7 +154,15 @@ export default function JobPostings({ user, toast }) {
         <h1 className="text-2xl font-semibold text-gray-800">Job Postings</h1>
         <button
           onClick={() => {
-            setForm({ id: null, title: "", description: "", status: "Open" });
+            setForm({
+              id: null,
+              title: "",
+              description: "",
+              location: "",
+              company_name: "",
+              salary_range: "",
+              status: "Open",
+            });
             setIsEditing(false);
             setShowForm(true);
           }}
@@ -162,8 +192,17 @@ export default function JobPostings({ user, toast }) {
               <p className="text-gray-600 text-sm line-clamp-3 mb-3">
                 {job.description}
               </p>
+              <p className="text-sm text-gray-500">
+                📍 {job.location || "Location not specified"}
+              </p>
+              <p className="text-sm text-gray-500">
+                🏢 {job.company_name || "—"}{" "}
+              </p>
+              <p className="text-sm text-gray-500">
+                💰 {job.salary_range || "Not specified"}
+              </p>
               <p
-                className={`inline-block px-2 py-1 text-xs font-medium rounded-md ${
+                className={`inline-block mt-2 px-2 py-1 text-xs font-medium rounded-md ${
                   job.status === "Open"
                     ? "bg-emerald-100 text-emerald-700"
                     : "bg-gray-200 text-gray-700"
@@ -204,7 +243,7 @@ export default function JobPostings({ user, toast }) {
 
       {/* Modal Form (for Add/Edit) */}
       {showForm && (
-        <div className="fixed inset-0 bg-amber-200 bg-opacity-10 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-lg w-full max-w-md p-6 relative">
             <h2 className="text-xl font-semibold mb-4">
               {isEditing ? "Edit Job" : "Add New Job"}
@@ -225,12 +264,51 @@ export default function JobPostings({ user, toast }) {
               <div>
                 <label className="text-sm text-gray-600">Description</label>
                 <textarea
-                  rows="4"
+                  rows="3"
                   required
                   value={form.description}
                   onChange={(e) =>
                     setForm({ ...form, description: e.target.value })
                   }
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm text-gray-600">Location</label>
+                  <input
+                    type="text"
+                    value={form.location}
+                    onChange={(e) =>
+                      setForm({ ...form, location: e.target.value })
+                    }
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm text-gray-600">Company Name</label>
+                  <input
+                    type="text"
+                    value={form.company_name}
+                    onChange={(e) =>
+                      setForm({ ...form, company_name: e.target.value })
+                    }
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm text-gray-600">Salary Range</label>
+                <input
+                  type="text"
+                  value={form.salary_range}
+                  onChange={(e) =>
+                    setForm({ ...form, salary_range: e.target.value })
+                  }
+                  placeholder="e.g. $50,000 - $70,000"
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
                 />
               </div>

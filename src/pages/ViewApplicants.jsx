@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
-import { User, Briefcase, Calendar } from "lucide-react";
+import { User, Briefcase, Calendar, MapPin, Building2 } from "lucide-react";
 
 export default function ViewApplicants({ user, toast }) {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [updatingId, setUpdatingId] = useState(null);
 
   useEffect(() => {
     if (!user) return;
@@ -22,17 +23,47 @@ export default function ViewApplicants({ user, toast }) {
           cover_letter,
           created_at,
           candidate:candidates(full_name, email),
-          job:jobs(title)
+          job:jobs(id, title, location, company_name, recruiter_id)
         `)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setApplications(data || []);
+
+      const filtered = (data || []).filter(
+        (a) => a.job?.recruiter_id === user.id
+      );
+      setApplications(filtered);
     } catch (err) {
       console.error("Fetch applications error:", err);
       toast("Unable to load applicants.", "error");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleStatusChange = async (appId, newStatus) => {
+    setUpdatingId(appId);
+    try {
+      const { error } = await supabase
+        .from("applications")
+        .update({ status: newStatus })
+        .eq("id", appId);
+
+      if (error) throw error;
+
+      // Update locally for snappy UI
+      setApplications((prev) =>
+        prev.map((app) =>
+          app.id === appId ? { ...app, status: newStatus } : app
+        )
+      );
+
+      toast(`Applicant marked as ${newStatus}`, "success");
+    } catch (err) {
+      console.error("Status update error:", err);
+      toast("Failed to update status.", "error");
+    } finally {
+      setUpdatingId(null);
     }
   };
 
@@ -71,6 +102,8 @@ export default function ViewApplicants({ user, toast }) {
               <tr>
                 <th className="text-left py-3 px-4">Candidate</th>
                 <th className="text-left py-3 px-4">Job Title</th>
+                <th className="text-left py-3 px-4">Company</th>
+                <th className="text-left py-3 px-4">Location</th>
                 <th className="text-left py-3 px-4">Status</th>
                 <th className="text-left py-3 px-4">Applied On</th>
               </tr>
@@ -87,32 +120,59 @@ export default function ViewApplicants({ user, toast }) {
                       <div>
                         <div>{app.candidate?.full_name || "Unknown"}</div>
                         <div className="text-gray-500 text-xs">
-                          {app.candidate?.email}
+                          {app.candidate?.email || "No email"}
                         </div>
                       </div>
                     </div>
                   </td>
+
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-2">
                       <Briefcase size={15} className="text-gray-500" />
-                      {app.job?.title}
+                      {app.job?.title || "Untitled"}
                     </div>
                   </td>
-                  <td className="py-3 px-4">
-                    <span
-                      className={`px-2 py-1 rounded-md text-xs font-medium ${
-                        app.status === "Pending"
-                          ? "bg-amber-100 text-amber-700"
-                          : app.status === "Interview"
-                          ? "bg-sky-100 text-sky-700"
-                          : app.status === "Hired"
-                          ? "bg-emerald-100 text-emerald-700"
-                          : "bg-red-100 text-red-700"
-                      }`}
-                    >
-                      {app.status}
-                    </span>
+
+                  <td className="py-3 px-4 text-gray-700">
+                    <div className="flex items-center gap-2">
+                      <Building2 size={14} className="text-gray-400" />
+                      {app.job?.company_name || "—"}
+                    </div>
                   </td>
+
+                  <td className="py-3 px-4 text-gray-700">
+                    <div className="flex items-center gap-2">
+                      <MapPin size={14} className="text-gray-400" />
+                      {app.job?.location || "—"}
+                    </div>
+                  </td>
+
+                  <td className="py-3 px-4">
+                    <select
+                      value={app.status || "Pending"}
+                      disabled={updatingId === app.id}
+                      onChange={(e) =>
+                        handleStatusChange(app.id, e.target.value)
+                      }
+                      className={`px-2 py-1 text-xs rounded-md border ${
+                        app.status === "Pending"
+                          ? "bg-amber-50 border-amber-200 text-amber-700"
+                          : app.status === "Interview"
+                          ? "bg-sky-50 border-sky-200 text-sky-700"
+                          : app.status === "Hired"
+                          ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                          : app.status === "Rejected"
+                          ? "bg-red-50 border-red-200 text-red-700"
+                          : "bg-gray-50 border-gray-200 text-gray-700"
+                      } focus:ring-2 focus:ring-sky-400`}
+                    >
+                      <option>Pending</option>
+                      <option>Interview</option>
+                      <option>Hired</option>
+                      <option>Rejected</option>
+                    </select>
+                  </td>
+
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-1 text-gray-500">
                       <Calendar size={14} /> {formatDate(app.created_at)}
