@@ -170,6 +170,7 @@ export default function ViewApplicants({ user, toast }) {
                       <option>Interview</option>
                       <option>Hired</option>
                       <option>Rejected</option>
+                      <option>Withdrawn</option>
                     </select>
                   </td>
 

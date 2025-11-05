@@ -5,6 +5,7 @@ import { Menu, Plus, LogOut } from "lucide-react";
 import SidebarRecruiter from "../components/SidebarRecruiter";
 import RecruiterSettings from "../components/RecruiterSettings";
 import Candidates from "../pages/Candidates";
+import RecruiterOverview from "../components/RecruiterOverview";
 import RecruiterProfile from "../pages/RecruiterProfile";
 import JobPostings from "../pages/JobPostings";
 import ViewApplicants from "../pages/ViewApplicants";
@@ -179,7 +180,7 @@ export default function RecruiterDashboard() {
       />
 
       {/* Mobile Header */}
-      <header className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-100 lg:hidden">
+      <header className="fixed top-15 left-0 right-0 z-40 bg-white border-b border-gray-100 lg:hidden">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <button
             onClick={() => setSidebarOpen(true)}
@@ -212,38 +213,8 @@ export default function RecruiterDashboard() {
         <main className="max-w-6xl mx-auto px-4 pt-20 lg:pt-8 pb-12 space-y-8">
           {/* Overview */}
           {activeTab === "overview" && (
-            <section>
-              <h1 className="text-3xl font-bold mb-2">Welcome back, {firstName}</h1>
-              <p className="text-gray-600 mb-8">
-                Here’s a quick overview of your recruitment activity.
-              </p>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                <StatCard title="Active Job Posts" value="5" />
-                <StatCard title="Total Applicants" value="27" />
-                <StatCard title="Interviews Scheduled" value="4" />
-              </div>
-
-              <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-gray-800 mb-4">
-                  Recent Applicants
-                </h2>
-                <ul className="divide-y divide-gray-100 text-sm">
-                  {[
-                    { name: "Jane Doe", role: "Frontend Developer" },
-                    { name: "Michael Brown", role: "UI/UX Designer" },
-                    { name: "Emily Davis", role: "Backend Engineer" },
-                  ].map((a, i) => (
-                    <li key={i} className="flex justify-between py-2">
-                      <span className="font-medium text-gray-700">{a.name}</span>
-                      <span className="text-gray-500">{a.role}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </section>
+            <RecruiterOverview user={user} />
           )}
-
           {/* Jobs */}
           {activeTab === "jobs" && <JobPostings user={user} toast={toast} />}
           {activeTab === "candidates" && <Candidates />}

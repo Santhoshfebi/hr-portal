@@ -7,7 +7,7 @@ import CandidateResume from "../components/CandidateResume";
 import CandidateSettings from "../components/CandidateSettings";
 import BrowseJobs from "../components/BrowseJobs";
 import CandidateApplications from "../components/CandidateApplications";
-import { Menu } from "lucide-react";
+import { Menu, LogOut} from "lucide-react";
 
 function toast(message, type = "info") {
   let container = document.getElementById("toast-container");
@@ -158,21 +158,27 @@ export default function CandidateDashboard() {
         toast={toast}
       />
 
-      <header className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-100 lg:hidden">
-        <div className="max-w-6xl mx-auto px-3 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="p-2 rounded-md hover:bg-slate-50"
-              aria-label="Open menu"
-            >
-              <Menu size={18} />
-            </button>
-            <div className="text-sm font-semibold text-sky-700">
-              Candidate Portal
-            </div>
+      <header className="fixed top-15 left-0 right-0 z-40 bg-white border-b border-gray-100 lg:hidden">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-2 rounded-md hover:bg-slate-100"
+          >
+            <Menu size={20} />
+          </button>
+          <div className="text-sm font-semibold text-sky-700">
+            Recruiter Dashboard
           </div>
-          <div className="text-sm text-gray-700">Hi, {firstName}</div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-700">Hi, {firstName}</span>
+            <button
+              onClick={handleLogout}
+              className="p-1.5 hover:bg-red-50 text-red-500 rounded-md"
+              title="Logout"
+            >
+              <LogOut size={16} />
+            </button>
+          </div>
         </div>
       </header>
 

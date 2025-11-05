@@ -6,13 +6,52 @@ import {
   FileText,
   XCircle,
   ExternalLink,
+  Building2,
   Briefcase,
   CheckCircle,
   XOctagon,
   Clock,
   Undo2,
+  MapPin,
   X,
+  Brain,
 } from "lucide-react";
+
+/* ---------------- Status Toast ---------------- */
+function StatusToast({ message, type, onClose }) {
+  const icons = {
+    Accepted: <CheckCircle className="text-emerald-500" size={18} />,
+    Rejected: <XOctagon className="text-rose-500" size={18} />,
+    Pending: <Clock className="text-amber-500" size={18} />,
+    Withdrawn: <Undo2 className="text-gray-400" size={18} />,
+    Error: <XCircle className="text-rose-500" size={18} />,
+  };
+
+  return (
+    <AnimatePresence>
+      {message && (
+        <motion.div
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 50 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="fixed bottom-6 right-6 z-50 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-xl rounded-lg px-4 py-3 flex items-center gap-3"
+        >
+          {icons[type] || <Clock className="text-sky-500" size={18} />}
+          <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+            {message}
+          </span>
+          <button
+            onClick={onClose}
+            className="ml-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          >
+            ✕
+          </button>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
 
 export default function MyApplications({ user, toast }) {
   const [applications, setApplications] = useState([]);
@@ -23,10 +62,12 @@ export default function MyApplications({ user, toast }) {
     total: 0,
     pending: 0,
     reviewed: 0,
-    accepted: 0,
+    hired: 0,
     rejected: 0,
     withdrawn: 0,
   });
+  const [toastMsg, setToastMsg] = useState(null);
+  const [toastType, setToastType] = useState("Pending");
 
   /* ---------------- Fetch Applications ---------------- */
   useEffect(() => {
@@ -75,7 +116,7 @@ export default function MyApplications({ user, toast }) {
       total: apps.length,
       pending: countByStatus("Pending"),
       reviewed: countByStatus("Reviewed"),
-      accepted: countByStatus("Accepted"),
+      hired: countByStatus("Hired"),
       rejected: countByStatus("Rejected"),
       withdrawn: countByStatus("Withdrawn"),
     });
@@ -93,15 +134,18 @@ export default function MyApplications({ user, toast }) {
 
       if (error) throw error;
 
-      toast("Application withdrawn successfully!", "success");
       const updated = applications.map((app) =>
         app.id === id ? { ...app, status: "Withdrawn" } : app
       );
       setApplications(updated);
       calculateStats(updated);
+
+      setToastType("Withdrawn");
+      setToastMsg("Application withdrawn successfully!");
     } catch (err) {
       console.error("Withdraw error:", err);
-      toast("Failed to withdraw. Please try again.", "error");
+      setToastType("Error");
+      setToastMsg("Failed to withdraw. Please try again.");
     }
   };
 
@@ -137,6 +181,14 @@ export default function MyApplications({ user, toast }) {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [selectedJob]);
+
+  /* ---------------- Auto Hide Toast ---------------- */
+  useEffect(() => {
+    if (toastMsg) {
+      const timer = setTimeout(() => setToastMsg(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMsg]);
 
   /* ---------------- Loading State ---------------- */
   if (loading) {
@@ -178,7 +230,7 @@ export default function MyApplications({ user, toast }) {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard icon={<Briefcase size={18} />} label="Total" value={stats.total} color="bg-sky-50 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300" />
         <StatCard icon={<Clock size={18} />} label="Pending" value={stats.pending} color="bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300" />
-        <StatCard icon={<CheckCircle size={18} />} label="Accepted" value={stats.accepted} color="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300" />
+        <StatCard icon={<CheckCircle size={18} />} label="Accepted" value={stats.hired} color="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300" />
         <StatCard icon={<XOctagon size={18} />} label="Rejected" value={stats.rejected} color="bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300" />
         <StatCard icon={<Undo2 size={18} />} label="Withdrawn" value={stats.withdrawn} color="bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300" />
       </div>
@@ -196,30 +248,31 @@ export default function MyApplications({ user, toast }) {
                   {app.jobs?.title || "Untitled Position"}
                 </button>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {app.jobs?.company_name || "Unknown Company"} •{" "}
+                  {app.jobs?.company_name || "Unknown Company"} • {" "}
                   {app.jobs?.location || "Remote"}
                 </p>
               </div>
 
               <div
-                className={`text-sm font-semibold px-3 py-1.5 rounded-full ${
-                  app.status === "Pending"
-                    ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
-                    : app.status === "Reviewed"
+                className={`text-sm font-semibold px-3 py-1.5 rounded-full ${app.status === "Pending"
+                  ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+                  : app.status === "Reviewed"
                     ? "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300"
-                    : app.status === "Accepted"
-                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
-                    : app.status === "Rejected"
-                    ? "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300"
-                    : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
-                }`}
+                    : app.status === "Hired"
+                      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
+                      : app.status === "Withdrawn"
+                        ? "bg-blue-200 text-black-100 dark:bg-blue-900/40 dark:text-black-300"
+                        : app.status === "Rejected"
+                          ? "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300"
+                          : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                  }`}
               >
                 {app.status}
               </div>
             </div>
 
             <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
-              Applied on:{" "}
+              Applied on : {" "}
               <span className="font-medium text-gray-800 dark:text-gray-200">
                 {new Date(app.created_at).toLocaleDateString()}
               </span>
@@ -275,10 +328,17 @@ export default function MyApplications({ user, toast }) {
                   <X size={18} />
                 </button>
               </div>
+              <div className="flex gap-6">
+                
+                <p className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-900/40 rounded-lg hover:bg-sky-100 dark:hover:bg-sky-800 transition">
+                  <Building2 size={16} /> {jobDetails.company_name} 
+                </p>
+                <p className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-900/40 rounded-lg hover:bg-sky-100 dark:hover:bg-sky-800 transition">
+                  <MapPin size={16} /> {jobDetails.location}
+                </p>
+              </div>
 
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                {jobDetails.company_name} • {jobDetails.location}
-              </p>
+
               <hr className="my-4 border-gray-200 dark:border-gray-700" />
 
               <h3 className="text-lg font-semibold mb-2 text-gray-800 dark:text-gray-200">Description</h3>
@@ -298,6 +358,13 @@ export default function MyApplications({ user, toast }) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Toast */}
+      <StatusToast
+        message={toastMsg}
+        type={toastType}
+        onClose={() => setToastMsg(null)}
+      />
     </div>
   );
 }

@@ -54,7 +54,7 @@ export default function BrowseJobs({ user, toast }) {
         .maybeSingle();
 
       if (error) throw error;
-      setResume(data);
+      if (data) setResume(data);
     } catch (err) {
       console.error("Resume fetch error:", err);
       toast("Could not load your resume.", "error");
@@ -62,7 +62,7 @@ export default function BrowseJobs({ user, toast }) {
   };
 
   /* ---------------- Handle Application ---------------- */
-  const handleApply = async (job) => {
+  const handleApply = (job) => {
     if (!user) return toast("Please sign in to apply for jobs.", "error");
     if (!resume?.resume_url)
       return toast("Please upload your resume before applying.", "error");
@@ -70,29 +70,11 @@ export default function BrowseJobs({ user, toast }) {
   };
 
   const submitApplication = async () => {
-    if (!applyingJob) return;
+    if (!applyingJob || !user) return;
     setSubmitting(true);
 
     try {
-      let coverLetterUrl = null;
-
-      // Upload cover letter if provided
-      if (coverLetter) {
-        const fileExt = coverLetter.name.split(".").pop();
-        const fileName = `${user.id}_${applyingJob.id}.${fileExt}`;
-        const filePath = `cover_letters/${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from("cover_letters")
-          .upload(filePath, coverLetter, { upsert: true });
-
-        if (uploadError) throw uploadError;
-
-        const { data } = supabase.storage.from("cover_letters").getPublicUrl(filePath);
-        coverLetterUrl = `${data.publicUrl}?t=${Date.now()}`;
-      }
-
-      // Check if already applied
+      // ✅ Step 1: Check for existing application first
       const { data: existing } = await supabase
         .from("applications")
         .select("id")
@@ -105,7 +87,26 @@ export default function BrowseJobs({ user, toast }) {
         return;
       }
 
-      // Submit new application
+      // ✅ Step 2: Upload cover letter (optional)
+      let coverLetterUrl = null;
+      if (coverLetter) {
+        const fileExt = coverLetter.name.split(".").pop();
+        const fileName = `${user.id}_${applyingJob.id}.${fileExt}`;
+        const filePath = `cover_letters/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("cover_letters")
+          .upload(filePath, coverLetter, { upsert: true });
+
+        if (uploadError) throw uploadError;
+
+        const { data: publicData } = supabase.storage
+          .from("cover_letters")
+          .getPublicUrl(filePath);
+        coverLetterUrl = publicData?.publicUrl || null;
+      }
+
+      // ✅ Step 3: Insert application
       const { error: insertError } = await supabase.from("applications").insert([
         {
           job_id: applyingJob.id,
@@ -220,7 +221,8 @@ export default function BrowseJobs({ user, toast }) {
               className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl"
             >
               <h2 className="text-xl font-bold mb-4 text-gray-800">
-                Apply for <span className="text-sky-600">{applyingJob.title}</span>
+                Apply for{" "}
+                <span className="text-sky-600">{applyingJob.title}</span>
               </h2>
 
               {/* Resume Section */}
@@ -238,7 +240,9 @@ export default function BrowseJobs({ user, toast }) {
                       {resume.resume_name}
                     </a>
                   ) : (
-                    <span className="text-red-500 ml-1">No resume uploaded</span>
+                    <span className="text-red-500 ml-1">
+                      No resume uploaded
+                    </span>
                   )}
                 </p>
               </div>
@@ -257,6 +261,12 @@ export default function BrowseJobs({ user, toast }) {
                     className="text-sm text-gray-600"
                   />
                 </div>
+                {coverLetter && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    Selected:{" "}
+                    <span className="font-medium">{coverLetter.name}</span>
+                  </p>
+                )}
               </div>
 
               {/* Buttons */}
