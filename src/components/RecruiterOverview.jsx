@@ -1,16 +1,16 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Briefcase, Users, CalendarDays } from "lucide-react";
+import { Users, UserPlus, Briefcase } from "lucide-react";
 import { supabase } from "../supabaseClient";
 
 /* ---------------- Overview Component ---------------- */
 export default function RecruiterOverview({ user }) {
   const [stats, setStats] = useState({
-    activeJobs: 0,
     totalApplicants: 0,
-    interviews: 0,
+    newApplicantsToday: 0,
   });
   const [recentApplicants, setRecentApplicants] = useState([]);
+  const [topJob, setTopJob] = useState(null);
 
   const firstName = user?.user_metadata?.full_name?.split(" ")[0] || "Recruiter";
 
@@ -19,41 +19,66 @@ export default function RecruiterOverview({ user }) {
 
     const fetchOverview = async () => {
       try {
-        // Fetch jobs with applications
+        // Fetch recruiter's jobs
         const { data: jobsData, error: jobsError } = await supabase
           .from("jobs")
-          .select(`id, title, status, applications!inner(status)`)
+          .select("id, title")
           .eq("recruiter_id", user.id);
 
         if (jobsError) throw jobsError;
+        const jobIds = jobsData.map((j) => j.id);
 
-        let activeJobs = 0;
         let totalApplicants = 0;
-        let interviews = 0;
+        let newApplicantsToday = 0;
+        let recentApplicantsData = [];
+        let jobCountMap = {};
 
-        jobsData.forEach((job) => {
-          activeJobs += job.status === "active" ? 1 : 0;
-          const apps = job.applications || [];
-          totalApplicants += apps.length;
-          interviews += apps.filter((a) => a.status === "interview").length;
-        });
+        if (jobIds.length > 0) {
+          // Fetch all applications for those jobs
+          const { data: applicationsData, error: appsError } = await supabase
+            .from("applications")
+            .select(
+              "id, status, created_at, job_id, candidate:candidates(full_name), job:jobs(title)"
+            )
+            .in("job_id", jobIds);
 
-        setStats({ activeJobs, totalApplicants, interviews });
+          if (appsError) throw appsError;
 
-        // Fetch recent applicants
-        const { data: applicants } = await supabase
-          .from("applications")
-          .select("*, candidate:candidates(full_name), job:jobs(title)")
-          .eq("recruiter_id", user.id)
-          .order("created_at", { ascending: false })
-          .limit(5);
+          totalApplicants = applicationsData.length;
 
-        const formatted = (applicants || []).map((a) => ({
-          name: a.candidate?.full_name || "Unknown Candidate",
-          jobTitle: a.job?.title || "Unknown Role",
-        }));
+          const today = new Date().toISOString().split("T")[0];
+          newApplicantsToday = applicationsData.filter(
+            (a) => a.created_at.startsWith(today)
+          ).length;
 
-        setRecentApplicants(formatted);
+          // Count applicants per job
+          applicationsData.forEach((a) => {
+            const jobTitle = a.job?.title || "Unknown Role";
+            jobCountMap[jobTitle] = (jobCountMap[jobTitle] || 0) + 1;
+          });
+
+          // Find top job posting
+          const topJobEntry = Object.entries(jobCountMap).sort(
+            (a, b) => b[1] - a[1]
+          )[0];
+          if (topJobEntry) {
+            setTopJob({ title: topJobEntry[0], count: topJobEntry[1] });
+          } else {
+            setTopJob(null);
+          }
+
+          // Sort and pick 5 most recent applicants
+          recentApplicantsData = applicationsData
+            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+            .slice(0, 5)
+            .map((a) => ({
+              name: a.candidate?.full_name || "Unknown Candidate",
+              jobTitle: a.job?.title || "Unknown Role",
+            }));
+        }
+
+        setStats({ totalApplicants, newApplicantsToday });
+        setRecentApplicants(recentApplicantsData);
       } catch (err) {
         console.error("Error fetching overview:", err);
       }
@@ -75,32 +100,44 @@ export default function RecruiterOverview({ user }) {
         Here’s a quick overview of your recruitment activity.
       </p>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        <AnimatedStatCard
-          title="Active Job Posts"
-          value={stats.activeJobs}
-          icon={<Briefcase size={26} className="text-sky-600" />}
-          color="#0ea5e9"
-          trend={`+${Math.floor(Math.random() * 5)} this week`}
-        />
+      {/* ✅ Two Stat Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
         <AnimatedStatCard
           title="Total Applicants"
           value={stats.totalApplicants}
           icon={<Users size={26} className="text-emerald-600" />}
           color="#22c55e"
-          trend={`+${Math.floor(Math.random() * 20)} this week`}
         />
         <AnimatedStatCard
-          title="Interviews Scheduled"
-          value={stats.interviews}
-          icon={<CalendarDays size={26} className="text-amber-600" />}
-          color="#f59e0b"
-          trend={`+${Math.floor(Math.random() * 3)} this week`}
+          title="New Applicants Today"
+          value={stats.newApplicantsToday}
+          icon={<UserPlus size={26} className="text-sky-600" />}
+          color="#0ea5e9"
         />
       </div>
 
-      {/* Recent Applicants */}
+      {/* ✅ Top Job Posting Widget */}
+      <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm mb-8">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="p-3 bg-sky-50 rounded-full">
+            <Briefcase className="text-sky-600" size={22} />
+          </div>
+          <h2 className="text-lg font-semibold text-gray-800">Top Job Posting</h2>
+        </div>
+
+        {topJob ? (
+          <div>
+            <p className="text-gray-900 text-xl font-semibold">{topJob.title}</p>
+            <p className="text-gray-500 text-sm">
+              {topJob.count} applicant{topJob.count !== 1 ? "s" : ""} so far
+            </p>
+          </div>
+        ) : (
+          <p className="text-gray-500 text-sm">No job postings with applicants yet.</p>
+        )}
+      </div>
+
+      {/* ✅ Recent Applicants */}
       <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-800">Recent Applicants</h2>
@@ -123,7 +160,7 @@ export default function RecruiterOverview({ user }) {
 }
 
 /* ---------------- Animated Stat Card ---------------- */
-function AnimatedStatCard({ title, value, icon, color, trend }) {
+function AnimatedStatCard({ title, value, icon, color }) {
   const [count, setCount] = useState(0);
 
   useEffect(() => {
@@ -145,15 +182,13 @@ function AnimatedStatCard({ title, value, icon, color, trend }) {
     return () => clearInterval(timer);
   }, [value]);
 
-  const formattedCount = count.toLocaleString();
-
   return (
     <motion.div
       whileHover={{ scale: 1.03 }}
-      className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row items-center sm:items-start gap-4 transition-all duration-300"
+      className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm flex items-center gap-4 transition-all duration-300"
     >
       <div
-        className="w-14 h-14 rounded-full flex items-center justify-center mb-2 sm:mb-0"
+        className="w-14 h-14 rounded-full flex items-center justify-center"
         style={{
           background: `linear-gradient(135deg, ${color}33 0%, ${color}1A 100%)`,
         }}
@@ -161,18 +196,11 @@ function AnimatedStatCard({ title, value, icon, color, trend }) {
         {icon}
       </div>
 
-      <div className="flex flex-col items-center sm:items-start">
+      <div>
         <p className="text-sm text-gray-500">{title}</p>
-        <p className="text-3xl font-semibold text-gray-900">{formattedCount}</p>
-        {trend && (
-          <span
-            className={`text-xs font-medium mt-1 ${
-              trend.startsWith("+") ? "text-emerald-600" : "text-red-500"
-            }`}
-          >
-            {trend}
-          </span>
-        )}
+        <p className="text-3xl font-semibold text-gray-900">
+          {count.toLocaleString()}
+        </p>
       </div>
     </motion.div>
   );

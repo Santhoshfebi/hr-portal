@@ -188,10 +188,10 @@ export default function JobPostings({ user, toast }) {
   const formatDate = (dateStr) =>
     dateStr
       ? new Date(dateStr).toLocaleDateString(undefined, {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        })
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })
       : "—";
 
   /* ---------------- Render ---------------- */
@@ -242,9 +242,13 @@ export default function JobPostings({ user, toast }) {
                 <h2 className="text-lg font-semibold text-gray-800 mb-2">
                   {job.title}
                 </h2>
+                <p className="text-gray-600 text-sm font-serif line-clamp-3 mb-3">
+                  Requirements : {job.requirements}
+                </p>
                 <p className="text-gray-600 text-sm line-clamp-3 mb-3">
                   {job.description}
                 </p>
+
 
                 <div className="space-y-1 text-sm text-gray-600">
                   <p className="flex items-center gap-2">
@@ -268,8 +272,12 @@ export default function JobPostings({ user, toast }) {
                   </div>
                 </div>
 
-                <div className="mt-5 flex justify-end gap-3 border-t pt-3">
-                  <button
+                <div className="mt-5 flex justify-between gap-3 border-t pt-3">
+                  <p className="font-semibold font-serif">
+                      {job.status}
+                    </p>
+                    <div className="flex gap-4">
+                      <button
                     onClick={() => openPanel(job)}
                     className="text-sky-600 hover:text-sky-700 flex items-center gap-1 text-sm font-medium"
                   >
@@ -281,6 +289,8 @@ export default function JobPostings({ user, toast }) {
                   >
                     <Trash2 size={16} /> Delete
                   </button>
+                    </div>
+                  
                 </div>
               </motion.div>
             ))}

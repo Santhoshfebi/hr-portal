@@ -30,7 +30,7 @@ export default function BrowseJobs({ user, toast }) {
     try {
       const { data, error } = await supabase
         .from("jobs")
-        .select("id, title, description, location, company_name, salary_range, created_at")
+        .select("id, title, description, location, requirements, company_name, salary_range, created_at")
         .eq("status", "Open")
         .order("created_at", { ascending: false });
 
@@ -177,6 +177,9 @@ export default function BrowseJobs({ user, toast }) {
               <div className="text-sm text-gray-500 flex items-center gap-2 mb-2">
                 <Building2 size={15} /> {job.company_name || "Company"}
               </div>
+               <p className="text-gray-600 text-sm font-serif line-clamp-3 mb-4">
+               {job.requirements}
+              </p>
               <p className="text-gray-600 text-sm line-clamp-3 mb-4">
                 {job.description}
               </p>

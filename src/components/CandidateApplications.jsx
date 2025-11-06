@@ -62,6 +62,7 @@ export default function MyApplications({ user, toast }) {
     total: 0,
     pending: 0,
     reviewed: 0,
+    interview:0,
     hired: 0,
     rejected: 0,
     withdrawn: 0,
@@ -116,6 +117,7 @@ export default function MyApplications({ user, toast }) {
       total: apps.length,
       pending: countByStatus("Pending"),
       reviewed: countByStatus("Reviewed"),
+      interview: countByStatus("Interview"),
       hired: countByStatus("Hired"),
       rejected: countByStatus("Rejected"),
       withdrawn: countByStatus("Withdrawn"),
@@ -230,6 +232,7 @@ export default function MyApplications({ user, toast }) {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard icon={<Briefcase size={18} />} label="Total" value={stats.total} color="bg-sky-50 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300" />
         <StatCard icon={<Clock size={18} />} label="Pending" value={stats.pending} color="bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300" />
+        <StatCard icon={<Brain size={18} />} label="Interview" value={stats.interview} color="bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300" />
         <StatCard icon={<CheckCircle size={18} />} label="Accepted" value={stats.hired} color="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300" />
         <StatCard icon={<XOctagon size={18} />} label="Rejected" value={stats.rejected} color="bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300" />
         <StatCard icon={<Undo2 size={18} />} label="Withdrawn" value={stats.withdrawn} color="bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300" />
