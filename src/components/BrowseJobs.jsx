@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../supabaseClient";
 import {
@@ -6,9 +6,12 @@ import {
   Building2,
   DollarSign,
   Calendar,
-  Paperclip,
   Upload,
   FileText,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
 } from "lucide-react";
 
 export default function BrowseJobs({ user, toast }) {
@@ -18,6 +21,14 @@ export default function BrowseJobs({ user, toast }) {
   const [submitting, setSubmitting] = useState(false);
   const [resume, setResume] = useState(null);
   const [coverLetter, setCoverLetter] = useState(null);
+
+  // Filters + Sorting + Pagination
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortOption, setSortOption] = useState("Newest");
+  const [selectedLocation, setSelectedLocation] = useState("All");
+  const [selectedCompany, setSelectedCompany] = useState("All");
+  const [currentPage, setCurrentPage] = useState(1);
+  const jobsPerPage = 9;
 
   /* ---------------- Fetch Open Jobs ---------------- */
   useEffect(() => {
@@ -30,9 +41,10 @@ export default function BrowseJobs({ user, toast }) {
     try {
       const { data, error } = await supabase
         .from("jobs")
-        .select("id, title, description, location, requirements, company_name, salary_range, created_at")
-        .eq("status", "Open")
-        .order("created_at", { ascending: false });
+        .select(
+          "id, title, description, location, requirements, company_name, salary_range, created_at"
+        )
+        .eq("status", "Open");
 
       if (error) throw error;
       setJobs(data || []);
@@ -61,7 +73,7 @@ export default function BrowseJobs({ user, toast }) {
     }
   };
 
-  /* ---------------- Handle Application ---------------- */
+  /* ---------------- Apply Logic ---------------- */
   const handleApply = (job) => {
     if (!user) return toast("Please sign in to apply for jobs.", "error");
     if (!resume?.resume_url)
@@ -74,7 +86,6 @@ export default function BrowseJobs({ user, toast }) {
     setSubmitting(true);
 
     try {
-      // ✅ Step 1: Check for existing application first
       const { data: existing } = await supabase
         .from("applications")
         .select("id")
@@ -87,7 +98,6 @@ export default function BrowseJobs({ user, toast }) {
         return;
       }
 
-      // ✅ Step 2: Upload cover letter (optional)
       let coverLetterUrl = null;
       if (coverLetter) {
         const fileExt = coverLetter.name.split(".").pop();
@@ -106,7 +116,6 @@ export default function BrowseJobs({ user, toast }) {
         coverLetterUrl = publicData?.publicUrl || null;
       }
 
-      // ✅ Step 3: Insert application
       const { error: insertError } = await supabase.from("applications").insert([
         {
           job_id: applyingJob.id,
@@ -122,7 +131,7 @@ export default function BrowseJobs({ user, toast }) {
 
       if (insertError) throw insertError;
 
-      toast("Application submitted successfully!", "success");
+      toast("✅ Application submitted successfully!", "success");
       setApplyingJob(null);
       setCoverLetter(null);
     } catch (err) {
@@ -144,7 +153,67 @@ export default function BrowseJobs({ user, toast }) {
     });
   };
 
-  /* ---------------- Render ---------------- */
+  /* ---------------- Filter + Sort + Pagination ---------------- */
+  const locations = useMemo(
+    () => ["All", ...new Set(jobs.map((j) => j.location).filter(Boolean))],
+    [jobs]
+  );
+  const companies = useMemo(
+    () => ["All", ...new Set(jobs.map((j) => j.company_name).filter(Boolean))],
+    [jobs]
+  );
+
+  const filteredAndSortedJobs = useMemo(() => {
+    let filtered = jobs;
+
+    if (searchTerm) {
+      const lower = searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (j) =>
+          j.title.toLowerCase().includes(lower) ||
+          j.company_name.toLowerCase().includes(lower) ||
+          j.location?.toLowerCase().includes(lower)
+      );
+    }
+
+    if (selectedLocation !== "All") {
+      filtered = filtered.filter((j) => j.location === selectedLocation);
+    }
+
+    if (selectedCompany !== "All") {
+      filtered = filtered.filter((j) => j.company_name === selectedCompany);
+    }
+
+    // Sorting
+    filtered = filtered.sort((a, b) => {
+      if (sortOption === "Newest") {
+        return new Date(b.created_at) - new Date(a.created_at);
+      } else if (sortOption === "Oldest") {
+        return new Date(a.created_at) - new Date(b.created_at);
+      } else if (sortOption === "Highest Salary") {
+        return (
+          parseInt(b.salary_range?.match(/\d+/)?.[0] || 0) -
+          parseInt(a.salary_range?.match(/\d+/)?.[0] || 0)
+        );
+      } else if (sortOption === "Lowest Salary") {
+        return (
+          parseInt(a.salary_range?.match(/\d+/)?.[0] || 0) -
+          parseInt(b.salary_range?.match(/\d+/)?.[0] || 0)
+        );
+      }
+      return 0;
+    });
+
+    return filtered;
+  }, [jobs, searchTerm, sortOption, selectedLocation, selectedCompany]);
+
+  const totalPages = Math.ceil(filteredAndSortedJobs.length / jobsPerPage);
+  const paginatedJobs = filteredAndSortedJobs.slice(
+    (currentPage - 1) * jobsPerPage,
+    currentPage * jobsPerPage
+  );
+
+  /* ---------------- UI ---------------- */
   if (loading)
     return (
       <div className="text-center py-16 text-gray-500 animate-pulse">
@@ -154,33 +223,103 @@ export default function BrowseJobs({ user, toast }) {
 
   return (
     <div className="space-y-8">
-      <div className="flex justify-between items-center">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-3xl font-bold text-gray-800">Browse Jobs</h1>
+
+        {/* Controls */}
+        <div className="flex flex-wrap gap-3 items-center">
+          {/* Search */}
+          <div className="relative">
+            <Search
+              size={18}
+              className="absolute left-3 top-2.5 text-gray-400"
+            />
+            <input
+              type="text"
+              placeholder="Search jobs..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="pl-9 pr-3 py-2 w-48 sm:w-64 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-sky-400 focus:outline-none"
+            />
+          </div>
+
+          {/* Filters */}
+          <select
+            value={selectedLocation}
+            onChange={(e) => {
+              setSelectedLocation(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-400"
+          >
+            {locations.map((loc) => (
+              <option key={loc}>{loc}</option>
+            ))}
+          </select>
+
+          <select
+            value={selectedCompany}
+            onChange={(e) => {
+              setSelectedCompany(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-400"
+          >
+            {companies.map((comp) => (
+              <option key={comp}>{comp}</option>
+            ))}
+          </select>
+
+          {/* Sort */}
+          <div className="relative">
+            <Filter
+              size={15}
+              className="absolute left-3 top-2.5 text-gray-400"
+            />
+            <select
+              value={sortOption}
+              onChange={(e) => {
+                setSortOption(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="pl-9 pr-8 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-400"
+            >
+              {["Newest", "Oldest", "Highest Salary", "Lowest Salary"].map(
+                (option) => (
+                  <option key={option}>{option}</option>
+                )
+              )}
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* Job Grid */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {jobs.length === 0 && (
+        {paginatedJobs.length === 0 && (
           <div className="col-span-full text-center py-10 text-gray-500 border border-dashed border-gray-300 rounded-xl">
-            No open jobs available right now.
+            No jobs found with the current filters.
           </div>
         )}
 
-        {jobs.map((job) => (
+        {paginatedJobs.map((job) => (
           <motion.div
             key={job.id}
-            whileHover={{ y: -4 }}
+            whileHover={{ y: -3 }}
             className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all flex flex-col justify-between"
           >
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-1">{job.title}</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-1">
+                {job.title}
+              </h2>
               <div className="text-sm text-gray-500 flex items-center gap-2 mb-2">
                 <Building2 size={15} /> {job.company_name || "Company"}
               </div>
-               <p className="text-gray-600 text-sm font-serif line-clamp-3 mb-4">
-               {job.requirements}
-              </p>
-              <p className="text-gray-600 text-sm line-clamp-3 mb-4">
+              <p className="text-gray-600 text-sm line-clamp-3 mb-3">
                 {job.description}
               </p>
               {job.location && (
@@ -208,6 +347,29 @@ export default function BrowseJobs({ user, toast }) {
         ))}
       </div>
 
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex justify-between items-center pt-4 border-t border-gray-100">
+          <button
+            onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+            disabled={currentPage === 1}
+            className="flex items-center gap-1 px-3 py-1.5 text-sm border rounded-md hover:bg-gray-50 text-gray-600 disabled:opacity-50"
+          >
+            <ChevronLeft size={14} /> Prev
+          </button>
+          <p className="text-sm text-gray-500">
+            Page {currentPage} of {totalPages}
+          </p>
+          <button
+            onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+            disabled={currentPage === totalPages}
+            className="flex items-center gap-1 px-3 py-1.5 text-sm border rounded-md hover:bg-gray-50 text-gray-600 disabled:opacity-50"
+          >
+            Next <ChevronRight size={14} />
+          </button>
+        </div>
+      )}
+
       {/* Apply Modal */}
       <AnimatePresence>
         {applyingJob && (
@@ -228,7 +390,7 @@ export default function BrowseJobs({ user, toast }) {
                 <span className="text-sky-600">{applyingJob.title}</span>
               </h2>
 
-              {/* Resume Section */}
+              {/* Resume */}
               <div className="bg-gray-50 border rounded-lg p-3 mb-4 text-sm text-gray-700">
                 <p className="flex items-center gap-2">
                   <FileText size={16} className="text-sky-600" />

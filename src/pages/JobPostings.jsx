@@ -133,7 +133,7 @@ export default function JobPostings({ user, toast }) {
           .single();
         if (error) throw error;
         setJobs((prev) => [data, ...prev]);
-        toast("🎉 Job posted successfully!", "success");
+        toast("Job posted successfully!", "success");
       }
       closePanel();
     } catch (err) {
