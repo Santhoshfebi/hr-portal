@@ -92,8 +92,11 @@ export default function Auth() {
           password,
           options: {
             data: { role: currentRole, full_name: fullName, phone },
+            // 👇 Add redirect URL for confirmation email
+            emailRedirectTo: `https://hr-portal-iota.vercel.app/`,
           },
         });
+
 
         if (error) throw error;
         const user = data?.user;
@@ -188,22 +191,20 @@ export default function Auth() {
               <button
                 type="button"
                 onClick={() => setRole("candidate")}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition ${
-                  role === "candidate"
+                className={`px-4 py-2 rounded-md text-sm font-medium transition ${role === "candidate"
                     ? "bg-blue-600 text-white shadow"
                     : "text-gray-700 hover:text-blue-600"
-                }`}
+                  }`}
               >
                 Candidate
               </button>
               <button
                 type="button"
                 onClick={() => setRole("recruiter")}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition ${
-                  role === "recruiter"
+                className={`px-4 py-2 rounded-md text-sm font-medium transition ${role === "recruiter"
                     ? "bg-blue-600 text-white shadow"
                     : "text-gray-700 hover:text-blue-600"
-                }`}
+                  }`}
               >
                 Recruiter
               </button>
@@ -214,11 +215,10 @@ export default function Auth() {
         {/* ✅ Feedback Message */}
         {message.text && (
           <div
-            className={`text-center p-2 rounded-md mb-4 ${
-              message.type === "error"
+            className={`text-center p-2 rounded-md mb-4 ${message.type === "error"
                 ? "bg-red-100 text-red-700"
                 : "bg-green-100 text-green-700"
-            }`}
+              }`}
           >
             {message.text}
           </div>
@@ -277,17 +277,16 @@ export default function Auth() {
               <button
                 type="submit"
                 disabled={loading}
-                className={`w-full py-3 rounded-lg text-white font-semibold transition ${
-                  loading
+                className={`w-full py-3 rounded-lg text-white font-semibold transition ${loading
                     ? "bg-blue-400 cursor-not-allowed"
                     : "bg-blue-600 hover:bg-blue-700"
-                }`}
+                  }`}
               >
                 {loading
                   ? "Processing..."
                   : isLogin
-                  ? "Login"
-                  : "Create Account"}
+                    ? "Login"
+                    : "Create Account"}
               </button>
 
               {/* ✅ Forgot Password Button */}
@@ -297,7 +296,7 @@ export default function Auth() {
                   onClick={handleForgotPassword}
                   className="mt-3 w-full text-sm text-blue-600 hover:underline"
                 >
-                  Forgot Password ? We got Your Back :) 
+                  Forgot Password ? We got Your Back :)
                 </button>
               )}
             </div>
@@ -321,4 +320,3 @@ export default function Auth() {
     </div>
   );
 }
- 
