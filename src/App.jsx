@@ -9,6 +9,7 @@ import RecruiterDashboard from "./pages/RecruiterDashboard";
 import Candidates from "./pages/Candidates";
 import ResetPassword from "./pages/ResetPassword";
 import AuthCallback from "./components/AuthCallback";
+import ResetSuccess from "./pages/ResetSuccess";
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
         <Route path="/recruiter" element={<RecruiterDashboard />} />
         <Route path="/candidates-info" element={<Candidates />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/reset-success" element={<ResetSuccess />} />
       </Routes>
       {/* <Footer /> */}
     </Router>
