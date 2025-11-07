@@ -93,7 +93,7 @@ export default function Auth() {
           options: {
             data: { role: currentRole, full_name: fullName, phone },
             // 👇 Add redirect URL for confirmation email
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
+            emailRedirectTo: `${window.location.origin}/email-confirmed`,
           },
         });
 

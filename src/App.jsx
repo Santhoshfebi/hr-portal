@@ -10,6 +10,7 @@ import Candidates from "./pages/Candidates";
 import ResetPassword from "./pages/ResetPassword";
 import AuthCallback from "./components/AuthCallback";
 import ResetSuccess from "./pages/ResetSuccess";
+import EmailConfirmSuccess from "./pages/EmailConfirmSuccess";
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/auth" element={<Auth />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/email-confirmed" element={<EmailConfirmSuccess />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/candidate" element={<CandidateDashboard />} />
         <Route path="/recruiter" element={<RecruiterDashboard />} />
