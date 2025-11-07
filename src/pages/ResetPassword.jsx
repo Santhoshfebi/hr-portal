@@ -1,65 +1,49 @@
-import { useState } from "react";
-import { supabase } from "../supabaseClient";
+import { useEffect } from "react";
+import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+import { CheckCircle } from "lucide-react";
 
-export default function ResetPassword() {
-  const [password, setPassword] = useState("");
-  const [message, setMessage] = useState({ text: "", type: "" });
-  const [loading, setLoading] = useState(false);
+export default function ResetSuccess() {
+  const navigate = useNavigate();
 
-  const handleReset = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setMessage({ text: "", type: "" });
-
-    try {
-      const { error } = await supabase.auth.updateUser({ password });
-      if (error) throw error;
-
-      setMessage({ text: "✅ Password updated successfully!", type: "success" });
-    } catch (err) {
-      setMessage({ text: err.message || "Failed to reset password.", type: "error" });
-    } finally {
-      setLoading(false);
-    }
-  };
+  // ⏳ Auto-redirect after 3 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      navigate("/dashboard");
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [navigate]);
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50 px-4">
-      <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
-        <h2 className="text-2xl font-bold text-blue-700 mb-4">Reset Password</h2>
+    <div className="flex items-center justify-center min-h-screen bg-linear-to-b from-blue-50 to-white px-4">
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md text-center"
+      >
+        <CheckCircle className="text-green-500 w-16 h-16 mx-auto mb-4" />
 
-        {message.text && (
-          <div
-            className={`mb-4 p-2 rounded-md text-center ${
-              message.type === "error"
-                ? "bg-red-100 text-red-700"
-                : "bg-green-100 text-green-700"
-            }`}
-          >
-            {message.text}
-          </div>
-        )}
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">
+          Password Updated!
+        </h2>
 
-        <form onSubmit={handleReset} className="space-y-4">
-          <input
-            type="password"
-            placeholder="Enter your new password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="border border-gray-300 w-full p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <button
-            type="submit"
-            disabled={loading}
-            className={`w-full py-3 rounded-lg text-white font-semibold ${
-              loading ? "bg-blue-400" : "bg-blue-600 hover:bg-blue-700"
-            }`}
-          >
-            {loading ? "Updating..." : "Update Password"}
-          </button>
-        </form>
-      </div>
+        <p className="text-gray-600 mb-6">
+          Your password has been successfully reset. You’ll be redirected to
+          your dashboard shortly.
+        </p>
+
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: "100%" }}
+          transition={{ duration: 3, ease: "easeInOut" }}
+          className="h-1 bg-blue-600 rounded-full"
+        />
+
+        <p className="text-xs text-gray-400 mt-3">
+          Redirecting to dashboard...
+        </p>
+      </motion.div>
     </div>
   );
 }
